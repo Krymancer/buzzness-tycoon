@@ -46,8 +46,10 @@ pub fn main() anyerror!void {
             for (0..@intCast(sizeY)) |j| {
                 const x: i32 = @intCast(i);
                 const y: i32 = @intCast(j);
-
-                const offsetX = if (@mod(y, 2) == 0) x * (grassWidth + gap) else x * (grassWidth + gap) + @divFloor(grassWidth, 2);
+                const offsetX = if (@mod(y, 2) == 0)
+                    x * (grassWidth + gap)
+                else
+                    x * (grassWidth + gap) + @divFloor(grassWidth, 2);
 
                 rl.drawTexture(grassTexture, baseX + offsetX, baseY + (grassTexture.height * y), rl.Color.white);
             }
