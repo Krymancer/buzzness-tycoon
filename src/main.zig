@@ -17,8 +17,8 @@ pub fn main() anyerror!void {
     const texture = rl.loadTexture("sprites/bee.png");
     defer rl.unloadTexture(texture);
 
-    const grassTexture = rl.loadTexture("sprites/grass.png");
-    defer rl.unloadTexture(grassTexture);
+    const tile = rl.loadTexture("sprites/grass-cube.png");
+    defer rl.unloadTexture(tile);
 
     while (!rl.windowShouldClose()) {
         rl.beginDrawing();
@@ -26,32 +26,28 @@ pub fn main() anyerror!void {
 
         //rl.drawTexture(texture, 12, 12, rl.Color.white);
 
-        const gap: i32 = 5;
+        const scale = 5;
 
-        const grassWidth: i32 = @intCast(grassTexture.width);
-        const grassHeight: i32 = @intCast(grassTexture.height);
+        const tileWidth: f32 = @floatFromInt(tile.width * scale);
+        const tileHeight: f32 = @floatFromInt(tile.height * scale);
 
-        const border = 10;
+        const sizeX: i32 = 5; //@intCast(@divFloor(screenWidth, grassWidth + gap) - border);
+        const sizeY: i32 = 5; //@intCast(@divFloor(screenHeight, grassHeight + gap) - border);
 
-        const sizeX: i32 = @intCast(@divFloor(screenWidth, grassWidth + gap) - border);
-        const sizeY: i32 = @intCast(@divFloor(screenHeight, grassHeight + gap) - border);
-
-        const diffX = screenWidth - (sizeX * grassWidth);
-        const diffY = screenHeight - (sizeY * grassHeight);
-
-        const baseX = @divFloor(diffX, 2) - grassWidth;
-        const baseY = @divFloor(diffY, 2) - grassHeight;
+        const offsetX: f32 = @as(f32, @floatFromInt(screenWidth)) / 2.5;
+        const offsetY: f32 = @floatFromInt(screenHeight / 4);
 
         for (0..@intCast(sizeX)) |i| {
             for (0..@intCast(sizeY)) |j| {
-                const x: i32 = @intCast(i);
-                const y: i32 = @intCast(j);
-                const offsetX = if (@mod(y, 2) == 0)
-                    x * (grassWidth + gap)
-                else
-                    x * (grassWidth + gap) + @divFloor(grassWidth, 2);
+                const x: f32 = @floatFromInt(i);
+                const y: f32 = @floatFromInt(j);
 
-                rl.drawTexture(grassTexture, baseX + offsetX, baseY + (grassTexture.height * y), rl.Color.white);
+                const screenX: f32 = (x - y) * (tileWidth / 2.0) + offsetX;
+                const screenY: f32 = (x + y) * (tileHeight / 4.0) + offsetY;
+
+                const position = rl.Vector2.init(screenX, screenY);
+
+                rl.drawTextureEx(tile, position, 0, scale, rl.Color.white);
             }
         }
 
