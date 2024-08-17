@@ -29,6 +29,10 @@ pub const Grid = struct {
         };
     }
 
+    pub fn deinit(self: @This()) void {
+        rl.unloadTexture(self.tileTexture);
+    }
+
     pub fn draw(self: @This()) void {
         for (0..self.width) |i| {
             for (0..self.height) |j| {
@@ -39,13 +43,10 @@ pub const Grid = struct {
                 const screenY: i32 = (x + y) * @as(i32, @intCast(self.tileHieght * self.scale / 4)) + @as(i32, @intCast(self.offsetY));
 
                 const position = rl.Vector2.init(@floatFromInt(screenX), @floatFromInt(screenY));
-
                 rl.drawTextureEx(self.tileTexture, position, 0, @floatFromInt(self.scale), rl.Color.white);
+
+                rl.drawText(rl.textFormat("(%d, %d)", .{ x, y }), screenX + @as(i32, @intCast(self.tileWidth * self.scale / 2)) - 30, screenY + @as(i32, @intCast(self.tileHieght * self.scale / 4)) - 10, 25, rl.Color.black);
             }
         }
-    }
-
-    pub fn deinit(self: @This()) void {
-        rl.unloadTexture(self.tileTexture);
     }
 };
