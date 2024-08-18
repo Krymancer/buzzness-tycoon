@@ -50,7 +50,7 @@ pub const Grid = struct {
         return rl.Vector2.init(@floatFromInt(screenX), @floatFromInt(screenY));
     }
 
-    fn xytoIso(self: @This(), x: i32, y: i32) rl.Vector2 {
+    fn xytoIso(self: @This(), x: f32, y: f32) rl.Vector2 {
         const a: f32 = @as(f32, @floatFromInt(self.tileWidth * self.scale)) / 2;
         const b: f32 = -@as(f32, @floatFromInt(self.tileWidth * self.scale)) / 2;
         const c: f32 = @as(f32, @floatFromInt(self.tileHieght * self.scale)) / 4;
@@ -63,11 +63,11 @@ pub const Grid = struct {
         const inv_c = det * -c;
         const inv_d = det * a;
 
-        const deoffx = x - @as(i32, @intCast(self.offsetX));
-        const deoofy = y - @as(i32, @intCast(self.offsetY));
+        const deoffx = x - @as(f32, @floatFromInt(self.offsetX));
+        const deoofy = y - @as(f32, @floatFromInt(self.offsetY));
 
-        const i = @as(f32, @floatFromInt(deoffx)) * inv_a + @as(f32, @floatFromInt(deoofy)) * inv_b;
-        const j = @as(f32, @floatFromInt(deoffx)) * inv_c + @as(f32, @floatFromInt(deoofy)) * inv_d;
+        const i = deoffx * inv_a + deoofy * inv_b;
+        const j = deoffx * inv_c + deoofy * inv_d;
 
         return rl.Vector2.init(i, j);
     }
@@ -93,14 +93,18 @@ pub const Grid = struct {
     }
 
     pub fn isMouseHovering(self: @This(), x: i32, y: i32) bool {
-        const mousePos = rl.getMousePosition();
-        const a = self.xytoIso(@intFromFloat(mousePos.x), @intFromFloat(mousePos.y));
+        const mousePosition = rl.getMousePosition();
+        const gridMousePosition = self.xytoIso(mousePosition.x, mousePosition.y);
 
         if (self.debug) {
-            rl.drawText(rl.textFormat("mouse: (%f, %f)", .{ mousePos.x, mousePos.y }), 10, 30, 25, rl.Color.white);
-            rl.drawText(rl.textFormat("grid: (%f, %f)", .{ a.x, a.y }), 10, 60, 25, rl.Color.white);
+            rl.drawText(rl.textFormat("mouse: (%f, %f)", .{ mousePosition.x, mousePosition.y }), 10, 30, 25, rl.Color.white);
+            rl.drawText(rl.textFormat("grid: (%d, %d)", .{ @as(i32, @intFromFloat(gridMousePosition.x)), @as(i32, @intFromFloat(gridMousePosition.y)) }), 10, 60, 25, rl.Color.white);
         }
 
-        return x == @as(i32, @intFromFloat(a.x)) and y == @as(i32, @intFromFloat(a.y));
+        if (gridMousePosition.x < 0 or gridMousePosition.y < 0) {
+            return false;
+        }
+
+        return x == @as(i32, @intFromFloat(gridMousePosition.x)) and y == @as(i32, @intFromFloat(gridMousePosition.y));
     }
 };
