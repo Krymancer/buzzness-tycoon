@@ -43,25 +43,50 @@ pub const Grid = struct {
         rl.unloadTexture(self.tileTexture);
     }
 
+    pub fn isoToXY(self: @This(), i: i32, j: i32) rl.Vector2 {
+        const screenX: i32 = (i - j) * @as(i32, @intCast(self.tileWidth * self.scale / 2)) - @as(i32, @intCast(self.tileWidth / 2 * self.scale)) + @as(i32, @intCast(self.offsetX));
+        const screenY: i32 = (i + j) * @as(i32, @intCast(self.tileHieght * self.scale / 4)) + @as(i32, @intCast(self.offsetY));
+
+        return rl.Vector2.init(@floatFromInt(screenX), @floatFromInt(screenY));
+    }
+
+    fn xytoIso(self: @This(), x: i32, y: i32) rl.Vector2 {
+        const a: f32 = @as(f32, @floatFromInt(self.tileWidth * self.scale)) / 2;
+        const b: f32 = -@as(f32, @floatFromInt(self.tileWidth * self.scale)) / 2;
+        const c: f32 = @as(f32, @floatFromInt(self.tileHieght * self.scale)) / 4;
+        const d: f32 = @as(f32, @floatFromInt(self.tileHieght * self.scale)) / 4;
+
+        const det: f32 = 1 / (a * d - b * c);
+
+        const inv_a = det * d;
+        const inv_b = det * -b;
+        const inv_c = det * -c;
+        const inv_d = det * a;
+
+        const deoffx = x - @as(i32, @intCast(self.offsetX));
+        const deoofy = y - @as(i32, @intCast(self.offsetY));
+
+        const i = @as(f32, @floatFromInt(deoffx)) * inv_a + @as(f32, @floatFromInt(deoofy)) * inv_b;
+        const j = @as(f32, @floatFromInt(deoffx)) * inv_c + @as(f32, @floatFromInt(deoofy)) * inv_d;
+
+        return rl.Vector2.init(i, j);
+    }
+
     pub fn draw(self: @This()) void {
         for (0..self.width) |i| {
             for (0..self.height) |j| {
                 const x: i32 = @intCast(i);
                 const y: i32 = @intCast(j);
+                const position = self.isoToXY(x, y);
 
-                const screenX: i32 = (x - y) * @as(i32, @intCast(self.tileWidth * self.scale / 2)) + @as(i32, @intCast(self.offsetX));
-                const screenY: i32 = (x + y) * @as(i32, @intCast(self.tileHieght * self.scale / 4)) + @as(i32, @intCast(self.offsetY));
-
-                const position = rl.Vector2.init(@floatFromInt(screenX), @floatFromInt(screenY));
-
-                if (isMouseHovering(self, x, y)) {
+                if (self.isMouseHovering(x, y)) {
                     rl.drawTextureEx(self.tileTexture, position, 0, @floatFromInt(self.scale), rl.Color.red);
                 } else {
                     rl.drawTextureEx(self.tileTexture, position, 0, @floatFromInt(self.scale), rl.Color.white);
                 }
 
                 if (self.debug) {
-                    rl.drawText(rl.textFormat("(%d, %d)", .{ x, y }), screenX + @as(i32, @intCast(self.tileWidth * self.scale / 2)) - 30, screenY + @as(i32, @intCast(self.tileHieght * self.scale / 4)) - 10, 25, rl.Color.black);
+                    rl.drawText(rl.textFormat("(%d, %d)", .{ x, y }), @as(i32, @intFromFloat(position.x)) + @as(i32, @intCast(self.tileWidth * self.scale / 2)) - 30, @as(i32, @intFromFloat(position.y)) + @as(i32, @intCast(self.tileHieght * self.scale / 4)) - 10, 25, rl.Color.black);
                 }
             }
         }
@@ -69,30 +94,13 @@ pub const Grid = struct {
 
     pub fn isMouseHovering(self: @This(), x: i32, y: i32) bool {
         const mousePos = rl.getMousePosition();
+        const a = self.xytoIso(@intFromFloat(mousePos.x), @intFromFloat(mousePos.y));
 
-        const screenX: i32 = (x - y) * @as(i32, @intCast(self.tileWidth * self.scale / 2)) + @as(i32, @intCast(self.offsetX));
-        const screenY: i32 = (x + y) * @as(i32, @intCast(self.tileHieght * self.scale / 4)) + @as(i32, @intCast(self.offsetY));
-
-        const mouseX: i32 = @intFromFloat(mousePos.x);
-        const mouseY: i32 = @intFromFloat(mousePos.y);
-
-        if (mouseX >= screenX and mouseX <= screenX + @as(i32, @intCast(self.tileWidth * self.scale)) and
-            mouseY >= screenY and mouseY <= screenY + @as(i32, @intCast(self.tileHieght * self.scale / 2)))
-        {
-            const relativeX = @divFloor((mouseX - screenX), @as(i32, @intCast(self.scale)));
-            const relativeY = @divFloor((mouseY - screenY), @as(i32, @intCast(self.scale)));
-
-            if (relativeX >= 32 or relativeY >= 32) {
-                return false;
-            }
-
-            const pixelColor = rl.getImageColor(self.tileImage, relativeX, relativeY);
-
-            if (pixelColor.a > 0) {
-                return true;
-            }
+        if (self.debug) {
+            rl.drawText(rl.textFormat("mouse: (%f, %f)", .{ mousePos.x, mousePos.y }), 10, 30, 25, rl.Color.white);
+            rl.drawText(rl.textFormat("grid: (%f, %f)", .{ a.x, a.y }), 10, 60, 25, rl.Color.white);
         }
 
-        return false;
+        return x == @as(i32, @intFromFloat(a.x)) and y == @as(i32, @intFromFloat(a.y));
     }
 };
