@@ -20,7 +20,7 @@ pub fn main() anyerror!void {
     const offsetX: f32 = @as(f32, @floatFromInt(screenWidth)) / 2;
     const offsetY: f32 = screenHeight / 4;
 
-    var grid = Grid.init(5, 5, offsetX, offsetY);
+    var grid = Grid.init(10, 10, offsetX, offsetY);
     defer grid.deinit();
 
     var bee = Bee.init();

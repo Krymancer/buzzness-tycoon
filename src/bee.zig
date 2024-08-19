@@ -4,7 +4,6 @@ const std = @import("std");
 pub const Bee = struct {
     position: rl.Vector2,
 
-    image: rl.Image,
     texture: rl.Texture,
     width: f32,
     height: f32,
@@ -19,7 +18,7 @@ pub const Bee = struct {
             .texture = rl.loadTexture("sprites/bee.png"),
             .width = 32,
             .height = 32,
-            .scale = 2,
+            .scale = 1,
 
             .position = rl.Vector2.init(540, 540),
 
@@ -32,7 +31,6 @@ pub const Bee = struct {
     }
 
     pub fn deinit(self: @This()) void {
-        rl.unloadImage(self.image);
         rl.unloadTexture(self.texture);
     }
 

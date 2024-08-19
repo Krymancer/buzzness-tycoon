@@ -5,7 +5,6 @@ pub const Grid = struct {
     width: usize,
     height: usize,
 
-    tileImage: rl.Image,
     tileTexture: rl.Texture,
     tileWidth: f32,
     tileHeight: f32,
@@ -29,7 +28,7 @@ pub const Grid = struct {
             .tileTexture = rl.loadTexture("sprites/grass-cube.png"),
             .tileWidth = 32,
             .tileHeight = 32,
-            .scale = 5,
+            .scale = 3,
 
             .debug = false,
         };
@@ -40,7 +39,6 @@ pub const Grid = struct {
     }
 
     pub fn deinit(self: @This()) void {
-        rl.unloadImage(self.tileImage);
         rl.unloadTexture(self.tileTexture);
     }
 
