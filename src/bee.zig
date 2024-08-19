@@ -14,7 +14,6 @@ pub const Bee = struct {
 
     pub fn init() @This() {
         return .{
-            .image = rl.loadImage("sprites/bee.png"),
             .texture = rl.loadTexture("sprites/bee.png"),
             .width = 32,
             .height = 32,

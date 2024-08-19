@@ -24,7 +24,6 @@ pub const Grid = struct {
             .offsetX = offsetX,
             .offsetY = offsetY,
 
-            .tileImage = rl.loadImage("sprites/grass-cube.png"),
             .tileTexture = rl.loadTexture("sprites/grass-cube.png"),
             .tileWidth = 32,
             .tileHeight = 32,

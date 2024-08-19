@@ -3,6 +3,8 @@ const std = @import("std");
 
 const Grid = @import("grid.zig").Grid;
 const Bee = @import("bee.zig").Bee;
+const Flower = @import("flower.zig").Flower;
+const Flowers = @import("flower.zig").Flowers;
 
 pub fn main() anyerror!void {
     const screenWidth = 1080;
@@ -26,6 +28,9 @@ pub fn main() anyerror!void {
     var bee = Bee.init();
     defer bee.deinit();
 
+    var flower = Flower.init(Flowers.rose);
+    defer flower.deinit();
+
     while (!rl.windowShouldClose()) {
         if (rl.isKeyPressed(rl.KeyboardKey.key_enter) and rl.isKeyDown(rl.KeyboardKey.key_left_alt)) {
             rl.toggleFullscreen();
@@ -38,8 +43,9 @@ pub fn main() anyerror!void {
 
         rl.drawFPS(10, 10);
 
-        grid.draw();
-        bee.draw();
+        //grid.draw();
+        //bee.draw();
+        flower.draw();
 
         rl.clearBackground(rl.Color.init(0x1e, 0x1e, 0x2e, 0xff));
     }
