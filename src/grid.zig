@@ -40,6 +40,7 @@ pub const Grid = struct {
     }
 
     pub fn deinit(self: @This()) void {
+        rl.unloadImage(self.tileImage);
         rl.unloadTexture(self.tileTexture);
     }
 
