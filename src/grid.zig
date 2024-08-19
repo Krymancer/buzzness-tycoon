@@ -7,17 +7,17 @@ pub const Grid = struct {
 
     tileImage: rl.Image,
     tileTexture: rl.Texture,
-    tileWidth: i32,
-    tileHeight: i32,
+    tileWidth: f32,
+    tileHeight: f32,
 
-    offsetX: i32,
-    offsetY: i32,
+    offsetX: f32,
+    offsetY: f32,
 
-    scale: i32,
+    scale: f32,
 
     debug: bool,
 
-    pub fn init(width: usize, height: usize, offsetX: i32, offsetY: i32) @This() {
+    pub fn init(width: usize, height: usize, offsetX: f32, offsetY: f32) @This() {
         return .{
             .width = width,
             .height = height,
@@ -44,42 +44,33 @@ pub const Grid = struct {
     }
 
     pub fn isoToXY(self: @This(), i: f32, j: f32) rl.Vector2 {
-        const scale: f32 = @floatFromInt(self.scale);
-        const tileWidth: f32 = @floatFromInt(self.tileWidth);
-        const tileHeight: f32 = @floatFromInt(self.tileHeight);
-        const offsetX: f32 = @floatFromInt(self.offsetX);
-        const offsetY: f32 = @floatFromInt(self.offsetY);
+        const halfScaledWidth: f32 = self.tileWidth * self.scale / 2.0;
+        const quarterScaledHeight: f32 = self.tileHeight * self.scale / 4.0;
 
-        const scaledWidth: f32 = tileWidth * scale;
-        const scaledHeight: f32 = tileHeight * scale;
-
-        const halfScaledWidth: f32 = scaledWidth / 2.0;
-        const quarterScaledHeight: f32 = scaledHeight / 4.0;
-
-        const screenX: f32 = (i - j) * halfScaledWidth - halfScaledWidth + offsetX;
-        const screenY: f32 = (i + j) * quarterScaledHeight + offsetY;
+        const screenX: f32 = (i - j) * halfScaledWidth - halfScaledWidth + self.offsetX;
+        const screenY: f32 = (i + j) * quarterScaledHeight + self.offsetY;
 
         return rl.Vector2.init(screenX, screenY);
     }
 
     fn xytoIso(self: @This(), x: f32, y: f32) rl.Vector2 {
-        const a: f32 = @as(f32, @floatFromInt(self.tileWidth * self.scale)) / 2;
-        const b: f32 = -@as(f32, @floatFromInt(self.tileWidth * self.scale)) / 2;
-        const c: f32 = @as(f32, @floatFromInt(self.tileHeight * self.scale)) / 4;
-        const d: f32 = @as(f32, @floatFromInt(self.tileHeight * self.scale)) / 4;
+        const a: f32 = self.tileWidth * self.scale / 2;
+        const b: f32 = -self.tileWidth * self.scale / 2;
+        const c: f32 = self.tileHeight * self.scale / 4;
+        const d: f32 = self.tileHeight * self.scale / 4;
 
-        const det: f32 = 1 / (a * d - b * c);
+        const determinant: f32 = 1 / (a * d - b * c);
 
-        const inv_a = det * d;
-        const inv_b = det * -b;
-        const inv_c = det * -c;
-        const inv_d = det * a;
+        const inverse_a = determinant * d;
+        const inverse_b = determinant * -b;
+        const inverse_c = determinant * -c;
+        const inverse_d = determinant * a;
 
-        const deoffx = x - @as(f32, @floatFromInt(self.offsetX));
-        const deoofy = y - @as(f32, @floatFromInt(self.offsetY));
+        const ajustedX = x - self.offsetX;
+        const ajustedY = y - self.offsetY;
 
-        const i = deoffx * inv_a + deoofy * inv_b;
-        const j = deoffx * inv_c + deoofy * inv_d;
+        const i = ajustedX * inverse_a + ajustedY * inverse_b;
+        const j = ajustedX * inverse_c + ajustedY * inverse_d;
 
         return rl.Vector2.init(i, j);
     }
@@ -93,27 +84,20 @@ pub const Grid = struct {
 
                 if (self.debug) {
                     if (self.isMouseHovering(x, y)) {
-                        rl.drawTextureEx(self.tileTexture, position, 0, @floatFromInt(self.scale), rl.Color.red);
+                        rl.drawTextureEx(self.tileTexture, position, 0, self.scale, rl.Color.red);
                     } else {
-                        rl.drawTextureEx(self.tileTexture, position, 0, @floatFromInt(self.scale), rl.Color.white);
+                        rl.drawTextureEx(self.tileTexture, position, 0, self.scale, rl.Color.white);
                     }
 
-                    const scale: f32 = @floatFromInt(self.scale);
-                    const tileWidth: f32 = @floatFromInt(self.tileWidth);
-                    const tileHeight: f32 = @floatFromInt(self.tileHeight);
-
-                    const scaledWidth: f32 = tileWidth * scale;
-                    const scaledHeight: f32 = tileHeight * scale;
-
-                    const halfScaledWidth: f32 = scaledWidth / 2.0;
-                    const quarterScaledHeight: f32 = scaledHeight / 4.0;
+                    const halfScaledWidth: f32 = self.tileWidth * self.scale / 2.0;
+                    const quarterScaledHeight: f32 = self.tileHeight * self.scale / 4.0;
 
                     const textX: i32 = @as(i32, @intFromFloat(position.x)) + @as(i32, @intFromFloat(halfScaledWidth)) - 30;
                     const textY: i32 = @as(i32, @intFromFloat(position.y)) + @as(i32, @intFromFloat(quarterScaledHeight)) - 10;
 
                     rl.drawText(rl.textFormat("(%0.f, %0.f)", .{ x, y }), textX, textY, 25, rl.Color.black);
                 } else {
-                    rl.drawTextureEx(self.tileTexture, position, 0, @floatFromInt(self.scale), rl.Color.white);
+                    rl.drawTextureEx(self.tileTexture, position, 0, self.scale, rl.Color.white);
                 }
             }
         }
@@ -122,11 +106,6 @@ pub const Grid = struct {
     pub fn isMouseHovering(self: @This(), x: f32, y: f32) bool {
         const mousePosition = rl.getMousePosition();
         const gridMousePosition = self.xytoIso(mousePosition.x, mousePosition.y);
-
-        if (self.debug) {
-            rl.drawText(rl.textFormat("mouse: (%f, %f)", .{ mousePosition.x, mousePosition.y }), 10, 30, 25, rl.Color.white);
-            rl.drawText(rl.textFormat("grid: (%d, %d)", .{ @as(i32, @intFromFloat(gridMousePosition.x)), @as(i32, @intFromFloat(gridMousePosition.y)) }), 10, 60, 25, rl.Color.white);
-        }
 
         if (gridMousePosition.x < 0 or gridMousePosition.y < 0) {
             return false;
