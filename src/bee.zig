@@ -12,14 +12,14 @@ pub const Bee = struct {
 
     debug: bool,
 
-    pub fn init() @This() {
+    pub fn init(x: f32, y: f32, texture: rl.Texture) @This() {
         return .{
-            .texture = rl.loadTexture("sprites/bee.png"),
+            .texture = texture,
             .width = 32,
             .height = 32,
             .scale = 1,
 
-            .position = rl.Vector2.init(540, 540),
+            .position = rl.Vector2.init(x, y),
 
             .debug = false,
         };
@@ -29,17 +29,12 @@ pub const Bee = struct {
         self.debug = true;
     }
 
-    pub fn deinit(self: @This()) void {
-        rl.unloadTexture(self.texture);
-    }
+    pub fn update(self: *@This(), deltaTime: f32) void {
+        // TODO: remove pure random walk and impelement a go to flower function
+        const scaleFactor: f32 = 10.0;
 
-    pub fn update(self: *@This(), deltaTime: f32) !void {
-        const rand = std.crypto.random;
-
-        const scaleFactor: f32 = 1000.0;
-
-        const offsetX = (rand.float(f32) * 2.0 - 1.0) * deltaTime * scaleFactor;
-        const offsetY = (rand.float(f32) * 2.0 - 1.0) * deltaTime * scaleFactor;
+        const offsetX: f32 = @as(f32, @floatFromInt(rl.getRandomValue(-100, 100))) * deltaTime * scaleFactor;
+        const offsetY: f32 = @as(f32, @floatFromInt(rl.getRandomValue(-100, 100))) * deltaTime * scaleFactor;
 
         self.position.x += offsetX;
         self.position.y += offsetY;
@@ -47,5 +42,12 @@ pub const Bee = struct {
 
     pub fn draw(self: @This()) void {
         rl.drawTextureEx(self.texture, self.position, 0, self.scale, rl.Color.white);
+    }
+
+    pub fn goToFlower() void {
+        //TODO: A bee must travel to the nearest flower
+        // Maybe bees can have a scale factor in recognizing flowers that are able
+        // to produce polen, but this may be a upgrade
+        // upgraded bees will skip flowers that don't have any polem avaliable
     }
 };

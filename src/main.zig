@@ -5,10 +5,14 @@ const Grid = @import("grid.zig").Grid;
 const Bee = @import("bee.zig").Bee;
 const Flower = @import("flower.zig").Flower;
 const Flowers = @import("flower.zig").Flowers;
+const Textures = @import("textures.zig").Textures;
 
 pub fn main() anyerror!void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
+
+    const rand = std.crypto.random;
+    rl.setRandomSeed(rand.int(u32));
 
     const screenWidth = 1080;
     const screenHeight = 1080;
@@ -23,15 +27,22 @@ pub fn main() anyerror!void {
     const offsetX: f32 = @as(f32, @floatFromInt(screenWidth)) / 2;
     const offsetY: f32 = screenHeight / 4;
 
+    const offset = rl.Vector2.init(offsetX, offsetY);
+
     const width = 10;
     const height = 10;
 
+    const gameTextures = Textures.init();
+    defer gameTextures.deinit();
+
+    var grid = Grid.init(width, height, offset);
+    defer grid.deinit();
+
     const flowers = try allocator.alloc(Flower, width * height);
-    const rand = std.crypto.random;
-    for (flowers) |*element| {
+    for (flowers, 0..) |*element, index| {
         const hasFlower = rand.boolean();
         if (hasFlower) {
-            const x = rand.intRangeAtMost(u32, 0, 3);
+            const x = rl.getRandomValue(0, 3);
             var flowerType: Flowers = undefined;
             if (x == 1) {
                 flowerType = Flowers.rose;
@@ -42,18 +53,21 @@ pub fn main() anyerror!void {
             if (x == 3) {
                 flowerType = Flowers.tulip;
             }
-            element.* = Flower.init(flowerType);
+
+            const flowerTexture = gameTextures.getFlowerTexture(flowerType);
+            const i: f32 = @floatFromInt(index / width);
+            const j: f32 = @floatFromInt(@mod(index, height));
+            element.* = Flower.init(flowerTexture);
+            element.setPosition(i, j, offset, grid.scale);
         }
     }
 
-    var grid = Grid.init(width, height, offsetX, offsetY);
-    defer grid.deinit();
-
-    var bee = Bee.init();
-    defer bee.deinit();
-
-    var flower = Flower.init(Flowers.rose);
-    defer flower.deinit();
+    const bees = try allocator.alloc(Bee, 50);
+    for (bees) |*element| {
+        const x: f32 = @floatFromInt(rl.getRandomValue(100, 900));
+        const y: f32 = @floatFromInt(rl.getRandomValue(200, 700));
+        element.* = Bee.init(x, y, gameTextures.bee);
+    }
 
     while (!rl.windowShouldClose()) {
         if (rl.isKeyPressed(rl.KeyboardKey.key_enter) and rl.isKeyDown(rl.KeyboardKey.key_left_alt)) {
@@ -62,8 +76,9 @@ pub fn main() anyerror!void {
 
         const deltaTime = rl.getFrameTime();
 
-        try bee.update(deltaTime);
-        flower.update(deltaTime);
+        for (bees) |*element| {
+            element.update(deltaTime);
+        }
 
         for (flowers) |*element| {
             element.update(deltaTime);
@@ -72,17 +87,17 @@ pub fn main() anyerror!void {
         rl.beginDrawing();
         defer rl.endDrawing();
 
-        rl.drawFPS(10, 10);
-        rl.drawText(rl.textFormat("%f", .{deltaTime}), 10, 30, 25, rl.Color.white);
-
         grid.draw();
-        for (flowers, 0..) |*element, index| {
-            const i: f32 = @floatFromInt(index / width);
-            const j: f32 = @floatFromInt(@mod(index, height));
-            element.draw(i, j, grid.offsetX, grid.offsetY, grid.scale);
+
+        for (flowers) |*element| {
+            element.draw();
         }
 
-        bee.draw();
+        for (bees) |*element| {
+            element.draw();
+        }
+
+        rl.drawFPS(10, 10);
 
         rl.clearBackground(rl.Color.init(0x1e, 0x1e, 0x2e, 0xff));
     }

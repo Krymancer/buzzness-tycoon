@@ -1,5 +1,6 @@
 const rl = @import("raylib");
 const std = @import("std");
+const utils = @import("utils.zig");
 
 pub const Flowers = enum { rose, tulip, dandelion };
 
@@ -17,13 +18,7 @@ pub const Flower = struct {
 
     timeAlive: f32,
 
-    pub fn init(flower: Flowers) @This() {
-        const texture = switch (flower) {
-            .rose => rl.loadTexture("sprites/rose.png"),
-            .tulip => rl.loadTexture("sprites/tulip.png"),
-            .dandelion => rl.loadTexture("sprites/dandelion.png"),
-        };
-
+    pub fn init(texture: rl.Texture) @This() {
         return .{
             .state = 0,
             .texture = texture,
@@ -31,15 +26,11 @@ pub const Flower = struct {
             .height = 32,
             .scale = 2,
 
-            .position = rl.Vector2.init(540, 540),
+            .position = rl.Vector2.init(0, 0),
             .timeAlive = 0,
 
             .debug = false,
         };
-    }
-
-    pub fn deinit(self: @This()) void {
-        rl.unloadTexture(self.texture);
     }
 
     pub fn isoToXY(self: @This(), i: f32, j: f32, offsetX: f32, offsetY: f32, gridScale: f32) rl.Vector2 {
@@ -52,9 +43,11 @@ pub const Flower = struct {
         return rl.Vector2.init(screenX, screenY);
     }
 
-    pub fn draw(self: *@This(), i: f32, j: f32, offsetX: f32, offsetY: f32, gridScale: f32) void {
-        self.position = self.isoToXY(i, j, offsetX, offsetY, gridScale);
+    pub fn setPosition(self: *@This(), i: f32, j: f32, offset: rl.Vector2, gridScale: f32) void {
+        self.position = self.isoToXY(i, j, offset.x, offset.y, gridScale);
+    }
 
+    pub fn draw(self: *@This()) void {
         const source = rl.Rectangle.init(self.state * self.width, 0, self.width, self.height);
         const destination = rl.Rectangle.init(self.position.x, self.position.y, self.width * self.scale, self.height * self.scale);
         const origin = rl.Vector2.init(source.width / 2, source.height / 2);
@@ -62,6 +55,10 @@ pub const Flower = struct {
     }
 
     pub fn update(self: *@This(), deltaTime: f32) void {
+        // TODO: flowers are only able to procude polem when mature (state = 5)
+        // add a field to indicate that the flower can have polen
+        // add a cooldown each time that a bee haverst the flower polen
+
         if (self.state < 4) {
             self.timeAlive += deltaTime;
             if (self.timeAlive > 1) {

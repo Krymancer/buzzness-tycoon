@@ -9,20 +9,18 @@ pub const Grid = struct {
     tileWidth: f32,
     tileHeight: f32,
 
-    offsetX: f32,
-    offsetY: f32,
+    offset: rl.Vector2,
 
     scale: f32,
 
     debug: bool,
 
-    pub fn init(width: usize, height: usize, offsetX: f32, offsetY: f32) @This() {
+    pub fn init(width: usize, height: usize, offset: rl.Vector2) @This() {
         return .{
             .width = width,
             .height = height,
 
-            .offsetX = offsetX,
-            .offsetY = offsetY,
+            .offset = offset,
 
             .tileTexture = rl.loadTexture("sprites/grass-cube.png"),
             .tileWidth = 32,
@@ -45,8 +43,8 @@ pub const Grid = struct {
         const halfScaledWidth: f32 = self.tileWidth * self.scale / 2.0;
         const quarterScaledHeight: f32 = self.tileHeight * self.scale / 4.0;
 
-        const screenX: f32 = (i - j) * halfScaledWidth - halfScaledWidth + self.offsetX;
-        const screenY: f32 = (i + j) * quarterScaledHeight + self.offsetY;
+        const screenX: f32 = (i - j) * halfScaledWidth - halfScaledWidth + self.offset.x;
+        const screenY: f32 = (i + j) * quarterScaledHeight + self.offset.y;
 
         return rl.Vector2.init(screenX, screenY);
     }
@@ -64,8 +62,8 @@ pub const Grid = struct {
         const inverse_c = determinant * -c;
         const inverse_d = determinant * a;
 
-        const ajustedX = x - self.offsetX;
-        const ajustedY = y - self.offsetY;
+        const ajustedX = x - self.offset.x;
+        const ajustedY = y - self.offset.y;
 
         const i = ajustedX * inverse_a + ajustedY * inverse_b;
         const j = ajustedX * inverse_c + ajustedY * inverse_d;
