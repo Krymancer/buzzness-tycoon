@@ -12,6 +12,12 @@ pub const Flower = struct {
     width: f32,
     height: f32,
 
+    randomGrowScale: f32,
+    growTreshHold: f32,
+
+    polenCoolDown: f32,
+    hasPolen: bool,
+
     scale: f32,
 
     debug: bool,
@@ -28,6 +34,12 @@ pub const Flower = struct {
 
             .position = rl.Vector2.init(0, 0),
             .timeAlive = 0,
+
+            .randomGrowScale = @floatFromInt(rl.getRandomValue(1, 10)),
+            .growTreshHold = 50,
+
+            .hasPolen = false,
+            .polenCoolDown = @floatFromInt(rl.getRandomValue(10, 50)),
 
             .debug = false,
         };
@@ -66,12 +78,27 @@ pub const Flower = struct {
         // they are showing in the game
         // this will simulate flowers to born (?)
 
+        if (self.state == 4) {
+            if (!self.hasPolen) {
+                self.timeAlive += self.randomGrowScale * deltaTime;
+                if (self.timeAlive > self.polenCoolDown) {
+                    self.hasPolen = true;
+                    self.timeAlive = 0;
+                }
+            }
+            return;
+        }
+
         if (self.state < 4) {
-            self.timeAlive += deltaTime;
-            if (self.timeAlive > 10) {
+            self.timeAlive += self.randomGrowScale * deltaTime;
+            if (self.timeAlive > self.growTreshHold) {
                 self.timeAlive = 0;
                 self.state += 1;
             }
         }
+    }
+
+    pub fn collectPolen(self: *@This()) void {
+        self.hasPolen = false;
     }
 };
