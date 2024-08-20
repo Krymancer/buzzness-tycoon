@@ -106,7 +106,7 @@ pub const Game = struct {
         const deltaTime = rl.getFrameTime();
 
         for (self.bees) |*element| {
-            element.update(deltaTime);
+            element.update(deltaTime, self.flowers);
         }
 
         for (self.flowers) |*element| {

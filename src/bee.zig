@@ -75,7 +75,8 @@ pub const Bee = struct {
         rl.drawTextureEx(self.texture, self.position, 0, self.scale, rl.Color.white);
     }
 
-    pub fn findNearestFlower(flowers: []Flower) rl.Vector2 {
+    pub fn findNearestFlower(self: @This(), flowers: []Flower) rl.Vector2 {
+        _ = self;
         _ = flowers;
         //TODO: A bee must travel to the nearest flower
         // Maybe bees can have a scale factor in recognizing flowers that are able
