@@ -39,7 +39,7 @@ pub const Game = struct {
 
         const flowers = try allocator.alloc(Flower, 10 * 10);
         for (flowers, 0..) |*element, index| {
-            const hasFlower = rand.boolean();
+            const hasFlower = true; // rand.boolean();
             if (hasFlower) {
                 const x = rl.getRandomValue(0, 3);
                 var flowerType: Flowers = undefined;

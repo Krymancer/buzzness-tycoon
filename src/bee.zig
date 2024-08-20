@@ -31,6 +31,14 @@ pub const Bee = struct {
 
     pub fn update(self: *@This(), deltaTime: f32) void {
         // TODO: remove pure random walk and impelement a go to flower function
+
+        // Bees sould search a flower to collect nectar and generate honey
+        // With honey the player can create new bees and upgrade them
+        // to increase speed, plen collected coodowns and such
+        // A bee should have a life span either frames, polen collected or timmer?
+
+        // The game will end if the player don't have any bee alive
+
         const scaleFactor: f32 = 10.0;
 
         const offsetX: f32 = @as(f32, @floatFromInt(rl.getRandomValue(-100, 100))) * deltaTime * scaleFactor;

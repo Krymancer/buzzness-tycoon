@@ -59,9 +59,16 @@ pub const Flower = struct {
         // add a field to indicate that the flower can have polen
         // add a cooldown each time that a bee haverst the flower polen
 
+        // Every flower will have a grow rate to prevent every flower to grow at the same
+        // speed, this will make the game fell more organic
+
+        //In the begginging all flowers will be hide and will not grow until
+        // they are showing in the game
+        // this will simulate flowers to born (?)
+
         if (self.state < 4) {
             self.timeAlive += deltaTime;
-            if (self.timeAlive > 1) {
+            if (self.timeAlive > 10) {
                 self.timeAlive = 0;
                 self.state += 1;
             }
