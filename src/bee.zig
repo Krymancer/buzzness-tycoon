@@ -33,14 +33,16 @@ pub const Bee = struct {
         rl.unloadTexture(self.texture);
     }
 
-    pub fn update(self: *@This()) !void {
+    pub fn update(self: *@This(), deltaTime: f32) !void {
         const rand = std.crypto.random;
 
-        const newX = if (rand.boolean()) rand.float(f32) else -rand.float(f32);
-        const newY = if (rand.boolean()) rand.float(f32) else -rand.float(f32);
+        const scaleFactor: f32 = 1000.0;
 
-        self.position.x += newX;
-        self.position.y += newY;
+        const offsetX = (rand.float(f32) * 2.0 - 1.0) * deltaTime * scaleFactor;
+        const offsetY = (rand.float(f32) * 2.0 - 1.0) * deltaTime * scaleFactor;
+
+        self.position.x += offsetX;
+        self.position.y += offsetY;
     }
 
     pub fn draw(self: @This()) void {
