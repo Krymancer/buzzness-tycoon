@@ -13,6 +13,7 @@ pub const Bee = struct {
     scale: f32,
 
     target: rl.Vector2,
+    targetLock: bool,
     timeAlive: f32,
     timeSpan: f32,
     dead: bool,
@@ -29,6 +30,7 @@ pub const Bee = struct {
             .position = rl.Vector2.init(x, y),
 
             .target = rl.Vector2.init(x, y),
+            .targetLock = false,
             .timeAlive = 0,
             .timeSpan = @floatFromInt(rl.getRandomValue(30, 70)),
             .dead = false,
@@ -58,9 +60,17 @@ pub const Bee = struct {
             self.dead = true;
         }
 
-        const target = self.findNearestFlower(flowers);
-
-        self.target = target;
+        // If we don't have any flower locked try to find nearest flower
+        if (!self.targetLock) {
+            const target = self.findNearestFlower(flowers);
+            self.target = target;
+        } else {
+            // Check if we are on range of the flower
+            // Check if flower has polen
+            // Collect the polen
+            // Set the cooldown for collecting
+            // Set Target Lock to false
+        }
 
         const scaleFactor: f32 = 10.0;
 
