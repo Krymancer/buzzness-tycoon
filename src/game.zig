@@ -7,6 +7,9 @@ const Flower = @import("flower.zig").Flower;
 const Flowers = @import("flower.zig").Flowers;
 const Textures = @import("textures.zig").Textures;
 
+const Resources = @import("resources.zig").Resources;
+const UI = @import("ui.zig").UI;
+
 pub const Game = struct {
     windowIcon: rl.Image,
     offset: rl.Vector2,

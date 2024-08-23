@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${cwd}/zig-out/bin/${workspaceFolderBasename}.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "preLaunchTask": "build",
+      "symbolSearchPath": "${workspaceFolder}/zig-out/bin/"
+    }
+  ]
+}
