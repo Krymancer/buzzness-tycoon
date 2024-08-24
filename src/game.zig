@@ -20,6 +20,9 @@ pub const Game = struct {
     bees: []Bee,
     flowers: []Flower,
 
+    resources: Resources,
+    ui: UI,
+
     allocator: std.mem.Allocator,
 
     pub fn init(width: f32, height: f32, allocator: std.mem.Allocator) !@This() {
@@ -80,6 +83,9 @@ pub const Game = struct {
             .grid = grid,
             .bees = bees,
             .flowers = flowers,
+
+            .resources = Resources.init(),
+            .ui = UI.init(),
         };
     }
 
@@ -88,6 +94,8 @@ pub const Game = struct {
         rl.unloadImage(self.windowIcon);
         self.grid.deinit();
         self.textures.deinit();
+        self.ui.deinit();
+        self.resources.deinit();
     }
 
     pub fn run(self: @This()) void {
@@ -130,6 +138,8 @@ pub const Game = struct {
         for (self.bees) |*element| {
             element.draw();
         }
+
+        self.ui.draw(self.resources.honey, self.bees.len);
 
         rl.drawFPS(10, 10);
 

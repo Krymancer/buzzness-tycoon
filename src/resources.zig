@@ -15,4 +15,8 @@ pub const Resources = struct {
             .honey = 25.0,
         };
     }
+
+    pub fn deinit(self: @This()) void {
+        _ = self;
+    }
 };
