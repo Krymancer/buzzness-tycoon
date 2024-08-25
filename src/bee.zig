@@ -82,6 +82,7 @@ pub const Bee = struct {
     }
 
     pub fn draw(self: @This()) void {
+        if (self.dead) return;
         rl.drawTextureEx(self.texture, self.position, 0, self.scale, rl.Color.white);
     }
 

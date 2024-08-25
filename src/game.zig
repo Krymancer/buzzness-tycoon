@@ -17,7 +17,7 @@ pub const Game = struct {
     textures: Textures,
     grid: Grid,
 
-    bees: []Bee,
+    bees: std.ArrayList(Bee),
     flowers: []Flower,
 
     resources: Resources,
@@ -67,11 +67,13 @@ pub const Game = struct {
             }
         }
 
-        const bees = try allocator.alloc(Bee, 50);
-        for (bees) |*element| {
+        var bees = std.ArrayList(Bee).init(allocator);
+
+        for (0..5) |index| {
+            _ = index;
             const x: f32 = @floatFromInt(rl.getRandomValue(100, 900));
             const y: f32 = @floatFromInt(rl.getRandomValue(200, 700));
-            element.* = Bee.init(x, y, textures.bee);
+            try bees.append(Bee.init(x, y, textures.bee));
         }
 
         return .{
@@ -96,6 +98,8 @@ pub const Game = struct {
         self.textures.deinit();
         self.ui.deinit();
         self.resources.deinit();
+
+        self.bees.deinit();
     }
 
     pub fn run(self: @This()) void {
@@ -116,8 +120,8 @@ pub const Game = struct {
     pub fn update(self: @This()) void {
         const deltaTime = rl.getFrameTime();
 
-        for (self.bees) |*element| {
-            element.update(deltaTime, self.flowers);
+        for (self.bees.items) |*bee| {
+            bee.update(deltaTime, self.flowers);
         }
 
         for (self.flowers) |*element| {
@@ -135,13 +139,13 @@ pub const Game = struct {
             element.draw();
         }
 
-        for (self.bees) |*element| {
-            element.draw();
+        for (self.bees.items) |*bee| {
+            bee.draw();
         }
 
-        self.ui.draw(self.resources.honey, self.bees.len);
+        self.ui.draw(self.resources.honey, self.bees.items.len);
 
-        rl.drawFPS(10, 10);
+        //rl.drawFPS(10, 10);
 
         rl.clearBackground(rl.Color.init(0x1e, 0x1e, 0x2e, 0xff));
     }
