@@ -102,10 +102,10 @@ pub const Game = struct {
         self.bees.deinit();
     }
 
-    pub fn run(self: @This()) void {
+    pub fn run(self: *@This()) !void {
         while (!rl.windowShouldClose()) {
             self.input();
-            self.update();
+            try self.update();
             self.draw();
         }
     }
@@ -117,11 +117,22 @@ pub const Game = struct {
         }
     }
 
-    pub fn update(self: @This()) void {
+    pub fn update(self: *@This()) !void {
         const deltaTime = rl.getFrameTime();
 
-        for (self.bees.items) |*bee| {
+        var deadBeesIndexes = std.ArrayList(usize).init(self.allocator);
+        defer deadBeesIndexes.deinit();
+
+        for (self.bees.items, 0..self.bees.items.len) |*bee, index| {
             bee.update(deltaTime, self.flowers);
+
+            if (bee.dead) {
+                try deadBeesIndexes.append(index);
+            }
+        }
+
+        for (deadBeesIndexes.items) |deadBeeIndex| {
+            _ = self.bees.swapRemove(deadBeeIndex);
         }
 
         for (self.flowers) |*element| {
