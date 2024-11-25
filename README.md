@@ -11,3 +11,20 @@ The game revolves around an isometric grid where flowers grow and potentially wi
 The current state of the game (or at least when I remember to update the screenshot) so you don't have to run the code
 
 ![Image](https://raw.githubusercontent.com/Krymancer/buzzness-tycoon/main/.github/game.png)
+
+## Build
+
+You can use debug for vscode if you have the C/C++ extension. 
+
+Or if you have Zig installed:
+
+```shell
+zig build run # this will build and run the project
+```
+
+Or: 
+
+```shell
+zig build 
+./zig-out/bin/buzzness-tycoon.exe # or only buzzness-tycoon if in unix
+```
