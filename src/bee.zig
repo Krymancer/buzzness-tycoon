@@ -35,7 +35,7 @@ pub const Bee = struct {
             .timeSpan = @floatFromInt(rl.getRandomValue(30, 70)),
             .dead = false,
 
-            .debug = false,
+            .debug = true,
         };
     }
 
@@ -49,7 +49,7 @@ pub const Bee = struct {
 
         // Bees sould search a flower to collect nectar and generate honey
         // With honey the player can create new bees and upgrade them
-        // to increase speed, plen collected coodowns and such
+        // to increase speed, polen collected coodowns and such
         // A bee should have a life span either frames, polen collected or timmer?
 
         // The game will end if the player don't have any bee alive
@@ -62,23 +62,13 @@ pub const Bee = struct {
 
         // If we don't have any flower locked try to find nearest flower
         if (!self.targetLock) {
-            const target = self.findNearestFlower(flowers);
-            self.target = target;
+            self.target = self.findNearestFlower(flowers);
+            self.targetLock = true;
         } else {
-            // Check if we are on range of the flower
-            // Check if flower has polen
-            // Collect the polen
-            // Set the cooldown for collecting
-            // Set Target Lock to false
+            const leapFactor: f32 = 0.9;
+            self.position.x += (self.target.x - self.position.x) * leapFactor * deltaTime;
+            self.position.y += (self.target.y - self.position.y) * leapFactor * deltaTime;
         }
-
-        const scaleFactor: f32 = 10.0;
-
-        const offsetX: f32 = @as(f32, @floatFromInt(rl.getRandomValue(-100, 100))) * deltaTime * scaleFactor;
-        const offsetY: f32 = @as(f32, @floatFromInt(rl.getRandomValue(-100, 100))) * deltaTime * scaleFactor;
-
-        self.position.x += offsetX;
-        self.position.y += offsetY;
     }
 
     pub fn draw(self: @This()) void {
@@ -87,13 +77,23 @@ pub const Bee = struct {
     }
 
     pub fn findNearestFlower(self: @This(), flowers: []Flower) rl.Vector2 {
-        _ = self;
-        _ = flowers;
         //TODO: A bee must travel to the nearest flower
         // Maybe bees can have a scale factor in recognizing flowers that are able
         // to produce polen, but this may be a upgrade
         // upgraded bees will skip flowers that don't have any polem avaliable
 
-        return rl.Vector2.init(0, 0);
+        var minimumDistanceSoFar = std.math.floatMax(f32);
+        var nearestFlower = rl.Vector2.init(0, 0);
+
+        for (flowers) |*element| {
+            const distance = rl.math.vector2DistanceSqr(element.position, self.position);
+
+            if (distance < minimumDistanceSoFar) {
+                minimumDistanceSoFar = distance;
+                nearestFlower = element.position;
+            }
+        }
+
+        return nearestFlower;
     }
 };

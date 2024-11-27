@@ -27,7 +27,7 @@ pub const Grid = struct {
             .tileHeight = 32,
             .scale = 3,
 
-            .debug = false,
+            .debug = true,
         };
     }
 
@@ -84,14 +84,6 @@ pub const Grid = struct {
                     } else {
                         rl.drawTextureEx(self.tileTexture, position, 0, self.scale, rl.Color.white);
                     }
-
-                    const halfScaledWidth: f32 = self.tileWidth * self.scale / 2.0;
-                    const quarterScaledHeight: f32 = self.tileHeight * self.scale / 4.0;
-
-                    const textX: i32 = @as(i32, @intFromFloat(position.x)) + @as(i32, @intFromFloat(halfScaledWidth)) - 30;
-                    const textY: i32 = @as(i32, @intFromFloat(position.y)) + @as(i32, @intFromFloat(quarterScaledHeight)) - 10;
-
-                    rl.drawText(rl.textFormat("(%0.f, %0.f)", .{ x, y }), textX, textY, 25, rl.Color.black);
                 } else {
                     rl.drawTextureEx(self.tileTexture, position, 0, self.scale, rl.Color.white);
                 }

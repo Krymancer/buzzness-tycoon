@@ -41,9 +41,9 @@ pub const Game = struct {
 
         const textures = Textures.init();
 
-        const grid = Grid.init(10, 10, offset);
+        const grid = Grid.init(4, 4, offset);
 
-        const flowers = try allocator.alloc(Flower, 10 * 10);
+        const flowers = try allocator.alloc(Flower, grid.width * grid.height);
         for (flowers, 0..) |*element, index| {
             const hasFlower = true; // rand.boolean();
             if (hasFlower) {
