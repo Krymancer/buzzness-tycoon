@@ -5,7 +5,7 @@ const Flowers = @import("flower.zig").Flowers;
 
 // Don't really know if this is a good idea
 // Try to only load textures once and reuse
-// A lot of flowers and bees can reuse the same texture for instance
+// A lot of flowers and bees can reuse the same texture
 
 pub const Textures = struct {
     bee: rl.Texture,

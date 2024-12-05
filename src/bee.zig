@@ -65,6 +65,11 @@ pub const Bee = struct {
             self.target = self.findNearestFlower(flowers);
             self.targetLock = true;
         } else {
+            // Check if is already on the target
+            // Try to get honey
+            // Go to next nearest flower
+
+            // Move to nearest flower bit by bit
             const leapFactor: f32 = 0.9;
             self.position.x += (self.target.x - self.position.x) * leapFactor * deltaTime;
             self.position.y += (self.target.y - self.position.y) * leapFactor * deltaTime;

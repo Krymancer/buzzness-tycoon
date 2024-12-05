@@ -17,7 +17,11 @@ const EventEmitter = struct {
     pub fn emit(self: *@This(), event: []const u8, msg: []const u8) void {
         var idx: usize = 0;
         for (self.listeners.items) |listener| {
-            if (eql(listener.name, event)) {
+            // The idea here is for each listener that we have
+            // When we emit a event we compare with the listener
+            // name is the same as the event we are emiting
+            // if so we can call the callback passing data
+            if (std.mem.eql(u8, listener.name, event)) {
                 listener.cb(msg);
                 if (listener.once) {
                     _ = self.listeners.swapRemove(idx);
@@ -37,9 +41,5 @@ const EventEmitter = struct {
 
     pub fn deinit(self: *@This()) void {
         self.listeners.deinit();
-    }
-
-    fn eql(a: []const u8, b: []const u8) bool {
-        return std.mem.eql(u8, a, b);
     }
 };

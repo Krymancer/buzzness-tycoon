@@ -45,18 +45,10 @@ pub const Flower = struct {
         };
     }
 
-    pub fn isoToXY(self: @This(), i: f32, j: f32, offsetX: f32, offsetY: f32, gridScale: f32) rl.Vector2 {
-        const halfScaledWidth: f32 = self.width * gridScale / 2.0;
-        const quarterScaledHeight: f32 = self.height * gridScale / 4.0;
-
-        const screenX: f32 = (i - j) * halfScaledWidth - halfScaledWidth + offsetX + self.width;
-        const screenY: f32 = (i + j) * quarterScaledHeight + offsetY - self.height / 2;
-
-        return rl.Vector2.init(screenX, screenY);
-    }
-
     pub fn setPosition(self: *@This(), i: f32, j: f32, offset: rl.Vector2, gridScale: f32) void {
-        self.position = self.isoToXY(i, j, offset.x, offset.y, gridScale);
+        // The folwer offset takes in consideration the sprite width and height to put them in the center of the square
+        // The offset passed to this is the offset for the grid x,y corner position (the tiles)
+        self.position = utils.isoToXY(i, j, self.width, self.height, offset.x + self.width, offset.y - self.height / 2, gridScale);
     }
 
     pub fn draw(self: *@This()) void {
@@ -78,6 +70,10 @@ pub const Flower = struct {
         // they are showing in the game
         // this will simulate flowers to born (?)
 
+        // If flower is not fully grown cant produce honey
+        // Once the flower is fully grown its periodicly will produce honey
+        // TODO: "Kill" flower at some point, maybe increase the honey
+        // production or decrease the polen cooldown?
         if (self.state == 4) {
             if (!self.hasPolen) {
                 self.timeAlive += self.randomGrowScale * deltaTime;
