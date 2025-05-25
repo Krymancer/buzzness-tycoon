@@ -60,16 +60,10 @@ pub const Grid = struct {
     }
 
     pub fn isMouseHovering(self: @This(), x: f32, y: f32) bool {
+        // Get mouse position in screen coordinates
         const mousePosition = rl.getMousePosition();
-        const gridMousePosition = utils.xyToIso(mousePosition.x, mousePosition.y, self.tileWidth, self.tileHeight, self.offset.x, self.offset.y, self.scale);
 
-        if (gridMousePosition.x < 0 or gridMousePosition.y < 0) {
-            return false;
-        }
-
-        const normalizedGridMouseX = @trunc(gridMousePosition.x);
-        const normalizedGridMouseY = @trunc(gridMousePosition.y);
-
-        return x == normalizedGridMouseX and y == normalizedGridMouseY;
+        // Use the improved isometric hit detection
+        return utils.isPointInIsometricTile(mousePosition.x, mousePosition.y, x, y, self.tileWidth, self.tileHeight, self.offset.x, self.offset.y, self.scale);
     }
 };
