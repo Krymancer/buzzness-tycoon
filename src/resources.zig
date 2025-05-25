@@ -21,4 +21,20 @@ pub const Resources = struct {
     pub fn deinit(self: @This()) void {
         _ = self;
     }
+
+    pub fn addHoney(self: *@This(), amount: f32) void {
+        self.honey += amount;
+    }
+
+    pub fn spendHoney(self: *@This(), amount: f32) bool {
+        if (self.honey >= amount) {
+            self.honey -= amount;
+            return true;
+        }
+        return false;
+    }
+
+    pub fn canAfford(self: @This(), amount: f32) bool {
+        return self.honey >= amount;
+    }
 };

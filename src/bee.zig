@@ -18,6 +18,9 @@ pub const Bee = struct {
     timeSpan: f32,
     dead: bool,
 
+    carryingPollen: bool,
+    pollenCollected: f32,
+
     debug: bool,
 
     pub fn init(x: f32, y: f32, texture: rl.Texture) @This() {
@@ -35,6 +38,9 @@ pub const Bee = struct {
             .timeSpan = @floatFromInt(rl.getRandomValue(30, 70)),
             .dead = false,
 
+            .carryingPollen = false,
+            .pollenCollected = 0,
+
             .debug = true,
         };
     }
@@ -45,14 +51,6 @@ pub const Bee = struct {
 
     pub fn update(self: *@This(), deltaTime: f32, flowers: []Flower) void {
         if (self.dead) return;
-        // TODO: remove pure random walk and impelement a go to flower function
-
-        // Bees sould search a flower to collect nectar and generate honey
-        // With honey the player can create new bees and upgrade them
-        // to increase speed, polen collected coodowns and such
-        // A bee should have a life span either frames, polen collected or timmer?
-
-        // The game will end if the player don't have any bee alive
 
         self.timeAlive += deltaTime;
 
@@ -65,30 +63,96 @@ pub const Bee = struct {
             self.target = self.findNearestFlower(flowers);
             self.targetLock = true;
         } else {
-            // Check if is already on the target
-            // Try to get honey
-            // Go to next nearest flower
+            // Check if we've reached the target flower
+            const distance = rl.math.vector2Distance(self.position, self.target);
+            const arrivalThreshold: f32 = 5.0; // How close is close enough
 
-            // Move to nearest flower bit by bit
-            const leapFactor: f32 = 0.9;
-            self.position.x += (self.target.x - self.position.x) * leapFactor * deltaTime;
-            self.position.y += (self.target.y - self.position.y) * leapFactor * deltaTime;
+            if (distance < arrivalThreshold) {
+                // We've reached the flower, check if it has pollen
+                for (flowers) |*flower| {
+                    const flowerDistance = rl.math.vector2Distance(flower.position, self.target);
+                    if (flowerDistance < 1.0) { // If this is the target flower
+                        if (flower.state == 4 and flower.hasPolen) {
+                            // Collect pollen
+                            flower.collectPolen();
+                            self.carryingPollen = true;
+                            self.pollenCollected += 1;
+                        }
+
+                        // After collecting (or failing to collect) pollen, look for a new target
+                        self.targetLock = false;
+                        break;
+                    }
+                }
+            } else {
+                // Move to nearest flower bit by bit
+                const leapFactor: f32 = 0.9;
+                self.position.x += (self.target.x - self.position.x) * leapFactor * deltaTime;
+                self.position.y += (self.target.y - self.position.y) * leapFactor * deltaTime;
+            }
         }
     }
 
     pub fn draw(self: @This()) void {
         if (self.dead) return;
-        rl.drawTextureEx(self.texture, self.position, 0, self.scale, rl.Color.white);
+
+        // Draw bee with yellow tint if carrying pollen
+        if (self.carryingPollen) {
+            rl.drawTextureEx(self.texture, self.position, 0, self.scale, rl.Color.yellow);
+        } else {
+            rl.drawTextureEx(self.texture, self.position, 0, self.scale, rl.Color.white);
+        }
     }
 
     pub fn findNearestFlower(self: @This(), flowers: []Flower) rl.Vector2 {
-        //TODO: A bee must travel to the nearest flower
-        // Maybe bees can have a scale factor in recognizing flowers that are able
-        // to produce polen, but this may be a upgrade
-        // upgraded bees will skip flowers that don't have any polem avaliable
-
+        // First try to find mature flowers with pollen
         var minimumDistanceSoFar = std.math.floatMax(f32);
         var nearestFlower = rl.Vector2.init(0, 0);
+        var foundFlowerWithPollen = false;
+
+        // Collect viable flowers within a reasonable distance
+        var viableFlowers = std.ArrayList(rl.Vector2).init(std.heap.page_allocator);
+        defer viableFlowers.deinit();
+
+        // First pass: look for mature flowers with pollen and find the minimum distance
+        for (flowers) |*element| {
+            // Only consider mature flowers with pollen
+            if (element.state == 4 and element.hasPolen) {
+                const distance = rl.math.vector2DistanceSqr(element.position, self.position);
+
+                if (distance < minimumDistanceSoFar) {
+                    minimumDistanceSoFar = distance;
+                    nearestFlower = element.position;
+                    foundFlowerWithPollen = true;
+                }
+            }
+        }
+
+        // Second pass: collect all flowers with pollen that are within 25% of the minimum distance
+        // This creates a "close enough" group of flowers to randomize between
+        if (foundFlowerWithPollen) {
+            const distanceThreshold = minimumDistanceSoFar * 1.25; // 25% margin
+
+            for (flowers) |*element| {
+                if (element.state == 4 and element.hasPolen) {
+                    const distance = rl.math.vector2DistanceSqr(element.position, self.position);
+                    if (distance <= distanceThreshold) {
+                        viableFlowers.append(element.position) catch {};
+                    }
+                }
+            }
+
+            // If we have multiple viable flowers, pick one randomly
+            if (viableFlowers.items.len > 1) {
+                const randomIndex = rl.getRandomValue(0, @intCast(viableFlowers.items.len - 1));
+                return viableFlowers.items[@intCast(randomIndex)];
+            } else if (foundFlowerWithPollen) {
+                return nearestFlower;
+            }
+        }
+
+        // If no flower with pollen found, find any flower (even without pollen)
+        minimumDistanceSoFar = std.math.floatMax(f32);
 
         for (flowers) |*element| {
             const distance = rl.math.vector2DistanceSqr(element.position, self.position);

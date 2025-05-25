@@ -55,7 +55,16 @@ pub const Flower = struct {
         const source = rl.Rectangle.init(self.state * self.width, 0, self.width, self.height);
         const destination = rl.Rectangle.init(self.position.x, self.position.y, self.width * self.scale, self.height * self.scale);
         const origin = rl.Vector2.init(source.width / 2, source.height / 2);
-        rl.drawTexturePro(self.texture, source, destination, origin, 0, rl.Color.white);
+
+        // Draw with a slight yellow glow if mature and has pollen
+        if (self.state == 4 and self.hasPolen) {
+            // Draw a slightly larger yellow version underneath for a "glow" effect
+            const glowDest = rl.Rectangle.init(self.position.x - 2, self.position.y - 2, (self.width * self.scale) + 4, (self.height * self.scale) + 4);
+            rl.drawTexturePro(self.texture, source, glowDest, origin, 0, rl.Color.init(255, 255, 100, 128));
+            rl.drawTexturePro(self.texture, source, destination, origin, 0, rl.Color.white);
+        } else {
+            rl.drawTexturePro(self.texture, source, destination, origin, 0, rl.Color.white);
+        }
     }
 
     pub fn update(self: *@This(), deltaTime: f32) void {
