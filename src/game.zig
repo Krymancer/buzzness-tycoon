@@ -30,18 +30,16 @@ pub const Game = struct {
         rl.setRandomSeed(rand.int(u32));
 
         rl.initWindow(@intFromFloat(width), @intFromFloat(height), "Buzzness Tycoon");
-
-        const windowIcon = rl.loadImage("sprites/bee.png");
+        const windowIcon = try rl.loadImage("sprites/bee.png");
         rl.setWindowIcon(windowIcon);
 
         const offsetX: f32 = width / 2;
         const offsetY: f32 = height / 4;
-
         const offset = rl.Vector2.init(offsetX, offsetY);
 
-        const textures = Textures.init();
+        const textures = try Textures.init();
 
-        const grid = Grid.init(4, 4, offset);
+        const grid = try Grid.init(4, 4, offset);
 
         const flowers = try allocator.alloc(Flower, grid.width * grid.height);
         for (flowers, 0..) |*element, index| {
@@ -112,7 +110,7 @@ pub const Game = struct {
 
     pub fn input(self: @This()) void {
         _ = self;
-        if (rl.isKeyPressed(rl.KeyboardKey.key_enter) and rl.isKeyDown(rl.KeyboardKey.key_left_alt)) {
+        if (rl.isKeyPressed(rl.KeyboardKey.enter) and rl.isKeyDown(rl.KeyboardKey.left_alt)) {
             rl.toggleFullscreen();
         }
     }

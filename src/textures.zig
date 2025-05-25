@@ -12,13 +12,12 @@ pub const Textures = struct {
     rose: rl.Texture,
     dandelion: rl.Texture,
     tulip: rl.Texture,
-
-    pub fn init() @This() {
+    pub fn init() !@This() {
         return .{
-            .rose = rl.loadTexture("sprites/rose.png"),
-            .tulip = rl.loadTexture("sprites/tulip.png"),
-            .dandelion = rl.loadTexture("sprites/dandelion.png"),
-            .bee = rl.loadTexture("sprites/bee.png"),
+            .rose = try rl.loadTexture("sprites/rose.png"),
+            .tulip = try rl.loadTexture("sprites/tulip.png"),
+            .dandelion = try rl.loadTexture("sprites/dandelion.png"),
+            .bee = try rl.loadTexture("sprites/bee.png"),
         };
     }
 

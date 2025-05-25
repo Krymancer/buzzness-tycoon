@@ -15,15 +15,14 @@ pub const Grid = struct {
     scale: f32,
 
     debug: bool,
-
-    pub fn init(width: usize, height: usize, offset: rl.Vector2) @This() {
+    pub fn init(width: usize, height: usize, offset: rl.Vector2) !@This() {
         return .{
             .width = width,
             .height = height,
 
             .offset = offset,
 
-            .tileTexture = rl.loadTexture("sprites/grass-cube.png"),
+            .tileTexture = try rl.loadTexture("sprites/grass-cube.png"),
             .tileWidth = 32,
             .tileHeight = 32,
             .scale = 3,
