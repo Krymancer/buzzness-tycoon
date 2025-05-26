@@ -1,11 +1,11 @@
 const rl = @import("raylib");
 const std = @import("std");
 
+const assets = @import("assets.zig");
 const Flowers = @import("flower.zig").Flowers;
 
-// Don't really know if this is a good idea
-// Try to only load textures once and reuse
-// A lot of flowers and bees can reuse the same texture
+// Load textures from embedded assets
+// This way we don't need external files when distributing the game
 
 pub const Textures = struct {
     bee: rl.Texture,
@@ -14,10 +14,10 @@ pub const Textures = struct {
     tulip: rl.Texture,
     pub fn init() !@This() {
         return .{
-            .rose = try rl.loadTexture("sprites/rose.png"),
-            .tulip = try rl.loadTexture("sprites/tulip.png"),
-            .dandelion = try rl.loadTexture("sprites/dandelion.png"),
-            .bee = try rl.loadTexture("sprites/bee.png"),
+            .rose = try assets.loadTextureFromMemory(assets.rose_png),
+            .tulip = try assets.loadTextureFromMemory(assets.tulip_png),
+            .dandelion = try assets.loadTextureFromMemory(assets.dandelion_png),
+            .bee = try assets.loadTextureFromMemory(assets.bee_png),
         };
     }
 

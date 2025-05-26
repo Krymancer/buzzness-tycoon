@@ -6,6 +6,7 @@ const Bee = @import("bee.zig").Bee;
 const Flower = @import("flower.zig").Flower;
 const Flowers = @import("flower.zig").Flowers;
 const Textures = @import("textures.zig").Textures;
+const assets = @import("assets.zig");
 
 const Resources = @import("resources.zig").Resources;
 const UI = @import("ui.zig").UI;
@@ -29,11 +30,10 @@ pub const Game = struct {
     allocator: std.mem.Allocator,
 
     pub fn init(width: f32, height: f32, allocator: std.mem.Allocator) !@This() {
-        const rand = std.crypto.random;
-        rl.setRandomSeed(rand.int(u32));
+        const rand = std.crypto.random;        rl.setRandomSeed(rand.int(u32));
 
         rl.initWindow(@intFromFloat(width), @intFromFloat(height), "Buzzness Tycoon");
-        const windowIcon = try rl.loadImage("sprites/bee.png");
+        const windowIcon = try assets.loadImageFromMemory(assets.bee_png);
         rl.setWindowIcon(windowIcon);
 
         const offsetX: f32 = width / 2;

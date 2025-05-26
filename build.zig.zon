@@ -1,7 +1,7 @@
 .{ .name = .buzznesstycoon, .version = "0.0.0", .dependencies = .{
     .@"raylib-zig" = .{
         .url = "https://github.com/Not-Nik/raylib-zig/archive/devel.tar.gz",
-        .hash = "122010ba07c23a361855114e8bb89a1092b510c0dc454abc00e9b603b27250e515cc",
+        .hash = "raylib_zig-5.6.0-dev-KE8REKAqBQAQugfCOjYYVRFOi7iaEJK1EMDcRUq8AOm2",
     },
 }, .paths = .{
     "build.zig",

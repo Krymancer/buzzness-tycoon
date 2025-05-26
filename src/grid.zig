@@ -1,6 +1,7 @@
 const rl = @import("raylib");
 const std = @import("std");
 const utils = @import("utils.zig");
+const assets = @import("assets.zig");
 
 pub const Grid = struct {
     width: usize,
@@ -22,7 +23,7 @@ pub const Grid = struct {
 
             .offset = offset,
 
-            .tileTexture = try rl.loadTexture("sprites/grass-cube.png"),
+            .tileTexture = try assets.loadTextureFromMemory(assets.grass_cube_png),
             .tileWidth = 32,
             .tileHeight = 32,
             .scale = 3,
