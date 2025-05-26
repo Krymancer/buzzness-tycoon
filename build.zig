@@ -13,6 +13,11 @@ pub fn build(b: *std.Build) void {
     const raygui = raylib_dep.module("raygui"); // raygui module
     const raylib_artifact = raylib_dep.artifact("raylib"); // raylib C library
 
+    // Add a module for the sprites
+    const sprites_module = b.addModule("sprites", .{
+        .root_source_file = b.path("sprites/sprite_index.zig"),
+    });
+
     const exe = b.addExecutable(.{
         .name = "buzzness-tycoon",
         .root_source_file = b.path("src/main.zig"),
@@ -23,6 +28,10 @@ pub fn build(b: *std.Build) void {
     exe.linkLibrary(raylib_artifact);
     exe.root_module.addImport("raylib", raylib);
     exe.root_module.addImport("raygui", raygui);
+    exe.root_module.addImport("sprites", sprites_module);
+
+    // Add path to the sprites directory for @embedFile
+    exe.addIncludePath(b.path(".")); // Makes the project root accessible
 
     b.installArtifact(exe);
 

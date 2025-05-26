@@ -1,12 +1,13 @@
 const std = @import("std");
 const rl = @import("raylib");
+const sprites = @import("sprites");
 
-// Embed file data
-pub const bee_png = @embedFile("./sprites/bee.png");
-pub const rose_png = @embedFile("./sprites/rose.png");
-pub const dandelion_png = @embedFile("./sprites/dandelion.png");
-pub const tulip_png = @embedFile("./sprites/tulip.png");
-pub const grass_cube_png = @embedFile("./sprites/grass-cube.png");
+// Use the sprite module data
+pub const bee_png = sprites.bee_png;
+pub const rose_png = sprites.rose_png;
+pub const dandelion_png = sprites.dandelion_png;
+pub const tulip_png = sprites.tulip_png;
+pub const grass_cube_png = sprites.grass_cube_png;
 
 // Custom Image loader that loads from embedded memory
 pub fn loadImageFromMemory(fileData: []const u8) !rl.Image {
