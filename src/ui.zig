@@ -26,7 +26,7 @@ pub const UI = struct {
 
         // Button to create a new bee (costs 10 honey)
         const buttonText = "Buy Bee (10 Honey)";
-        const buttonWidth: f32 = 200; // Increased width to fit text
+        const buttonWidth: f32 = 220;
         const buttonHeight: f32 = 40;
         const buttonRect = rl.Rectangle.init(10, 80, buttonWidth, buttonHeight);
 

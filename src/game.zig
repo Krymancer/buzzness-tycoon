@@ -11,6 +11,9 @@ const Resources = @import("resources.zig").Resources;
 const UI = @import("ui.zig").UI;
 
 pub const Game = struct {
+    width: f32,
+    height: f32,
+
     windowIcon: rl.Image,
     offset: rl.Vector2,
 
@@ -86,6 +89,9 @@ pub const Game = struct {
 
             .resources = Resources.init(),
             .ui = UI.init(),
+
+            .width = width,
+            .height = height,
         };
     }
 
@@ -173,6 +179,6 @@ pub const Game = struct {
             }
         }
 
-        rl.drawFPS(10, 10);
+        rl.drawFPS(@as(i32, @intFromFloat(self.width - 100)), 10);
     }
 };
