@@ -64,6 +64,22 @@ pub const Grid = struct {
         self.offset = utils.calculateCenteredGridOffset(self.width, self.height, self.tileWidth, self.tileHeight, self.scale, self.viewportWidth, self.viewportHeight);
     }
 
+    pub fn getRandomPositionInBounds(self: @This()) rl.Vector2 {
+        // Get a random position within the grid's visual bounds
+        const scaledTileWidth = self.tileWidth * self.scale;
+        const scaledTileHeight = self.tileHeight * self.scale;
+
+        // Calculate the approximate grid bounds
+        const gridWidth = @as(f32, @floatFromInt(self.width)) * scaledTileWidth;
+        const gridHeight = @as(f32, @floatFromInt(self.height)) * scaledTileHeight;
+
+        // Generate random position within the grid bounds
+        const x = self.offset.x + @as(f32, @floatFromInt(rl.getRandomValue(0, @as(i32, @intFromFloat(gridWidth)))));
+        const y = self.offset.y + @as(f32, @floatFromInt(rl.getRandomValue(0, @as(i32, @intFromFloat(gridHeight)))));
+
+        return rl.Vector2.init(x, y);
+    }
+
     pub fn deinit(self: @This()) void {
         rl.unloadTexture(self.tileTexture);
     }
