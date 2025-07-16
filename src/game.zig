@@ -13,8 +13,8 @@ const Resources = @import("resources.zig").Resources;
 const UI = @import("ui.zig").UI;
 
 pub const Game = struct {
-    const GRID_WIDTH = 26;
-    const GRID_HEIGHT = 26;
+    const GRID_WIDTH = 16;
+    const GRID_HEIGHT = 16;
 
     width: f32,
     height: f32,
@@ -44,7 +44,7 @@ pub const Game = struct {
 
         const grid = try Grid.init(GRID_WIDTH, GRID_HEIGHT, width, height);
 
-        const flowers = try allocator.alloc(Flower, GRID_WIDTH * GRID_HEIGHT);
+        const flowers = try allocator.alloc(Flower, grid.width * grid.height);
         for (flowers, 0..) |*element, index| {
             const hasFlower = true;
             if (hasFlower) {
@@ -61,8 +61,8 @@ pub const Game = struct {
                 }
 
                 const flowerTexture = textures.getFlowerTexture(flowerType);
-                const i: f32 = @floatFromInt(index / GRID_WIDTH);
-                const j: f32 = @floatFromInt(@mod(index, GRID_HEIGHT));
+                const i: f32 = @as(f32, @floatFromInt(index / grid.height));
+                const j: f32 = @as(f32, @floatFromInt(@mod(index, grid.width)));
                 element.* = Flower.init(flowerTexture);
                 element.setPosition(i, j, grid.offset, grid.scale);
             }
@@ -112,10 +112,22 @@ pub const Game = struct {
         }
     }
 
-    pub fn input(self: @This()) void {
-        _ = self;
+    pub fn input(self: *@This()) void {
         if (rl.isKeyPressed(rl.KeyboardKey.enter) and rl.isKeyDown(rl.KeyboardKey.left_alt)) {
             rl.toggleFullscreen();
+        }
+
+        const wheelMove = rl.getMouseWheelMove();
+        if (wheelMove != 0.0) {
+            const zoomSpeed = 0.3;
+            const zoomDelta = wheelMove * zoomSpeed;
+            self.grid.zoom(zoomDelta);
+
+            for (self.flowers, 0..) |*flower, index| {
+                const i: f32 = @as(f32, @floatFromInt(index / self.grid.height));
+                const j: f32 = @as(f32, @floatFromInt(@mod(index, self.grid.width)));
+                flower.setPosition(i, j, self.grid.offset, self.grid.scale);
+            }
         }
     }
     pub fn update(self: *@This()) !void {

@@ -14,14 +14,20 @@ pub const Grid = struct {
     offset: rl.Vector2,
 
     scale: f32,
+    baseScale: f32,
+    minScale: f32,
+    maxScale: f32,
+
+    viewportWidth: f32,
+    viewportHeight: f32,
 
     debug: bool,
     pub fn init(width: usize, height: usize, viewportWidth: f32, viewportHeight: f32) !@This() {
         const tileWidth = 32;
         const tileHeight = 32;
-        const scale = 3;
+        const baseScale = 3;
 
-        const offset = utils.calculateCenteredGridOffset(width, height, tileWidth, tileHeight, scale, viewportWidth, viewportHeight);
+        const offset = utils.calculateCenteredGridOffset(width, height, tileWidth, tileHeight, baseScale, viewportWidth, viewportHeight);
 
         return .{
             .width = width,
@@ -32,7 +38,13 @@ pub const Grid = struct {
             .tileTexture = try assets.loadTextureFromMemory(assets.grass_cube_png),
             .tileWidth = tileWidth,
             .tileHeight = tileHeight,
-            .scale = scale,
+            .scale = baseScale,
+            .baseScale = baseScale,
+            .minScale = 1.0,
+            .maxScale = 6.0,
+
+            .viewportWidth = viewportWidth,
+            .viewportHeight = viewportHeight,
 
             .debug = true,
         };
@@ -40,6 +52,16 @@ pub const Grid = struct {
 
     pub fn enableDebug(self: *@This()) void {
         self.debug = true;
+    }
+
+    pub fn zoom(self: *@This(), zoomDelta: f32) void {
+        const newScale = self.scale + zoomDelta;
+        self.scale = @max(self.minScale, @min(self.maxScale, newScale));
+        self.updateOffset();
+    }
+
+    pub fn updateOffset(self: *@This()) void {
+        self.offset = utils.calculateCenteredGridOffset(self.width, self.height, self.tileWidth, self.tileHeight, self.scale, self.viewportWidth, self.viewportHeight);
     }
 
     pub fn deinit(self: @This()) void {
@@ -67,10 +89,7 @@ pub const Grid = struct {
     }
 
     pub fn isMouseHovering(self: @This(), x: f32, y: f32) bool {
-        // Get mouse position in screen coordinates
         const mousePosition = rl.getMousePosition();
-
-        // Use the improved isometric hit detection
         return utils.isPointInIsometricTile(mousePosition.x, mousePosition.y, x, y, self.tileWidth, self.tileHeight, self.offset.x, self.offset.y, self.scale);
     }
 };

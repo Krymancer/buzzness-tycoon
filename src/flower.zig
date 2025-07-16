@@ -19,6 +19,7 @@ pub const Flower = struct {
     hasPolen: bool,
 
     scale: f32,
+    effectiveScale: f32,
 
     debug: bool,
 
@@ -31,6 +32,7 @@ pub const Flower = struct {
             .width = 32,
             .height = 32,
             .scale = 2,
+            .effectiveScale = 2,
 
             .position = rl.Vector2.init(0, 0),
             .timeAlive = 0,
@@ -46,24 +48,28 @@ pub const Flower = struct {
     }
 
     pub fn setPosition(self: *@This(), i: f32, j: f32, offset: rl.Vector2, gridScale: f32) void {
-        // The folwer offset takes in consideration the sprite width and height to put them in the center of the square
-        // The offset passed to this is the offset for the grid x,y corner position (the tiles)
-        self.position = utils.isoToXY(i, j, self.width, self.height, offset.x + self.width, offset.y - self.height / 2, gridScale);
+        const tilePosition = utils.isoToXY(i, j, self.width, self.height, offset.x, offset.y, gridScale);
+        self.effectiveScale = self.scale * (gridScale / 3.0);
+
+        const scaledTileWidth = self.width * gridScale;
+        const scaledTileHeight = self.height * gridScale;
+
+        const flowerWidth = self.width * self.effectiveScale;
+        const flowerHeight = self.height * self.effectiveScale;
+
+        self.position = rl.Vector2.init(tilePosition.x + (scaledTileWidth - flowerWidth) / 2.0, tilePosition.y - (scaledTileHeight - flowerHeight));
     }
 
     pub fn draw(self: *@This()) void {
         const source = rl.Rectangle.init(self.state * self.width, 0, self.width, self.height);
-        const destination = rl.Rectangle.init(self.position.x, self.position.y, self.width * self.scale, self.height * self.scale);
-        const origin = rl.Vector2.init(source.width / 2, source.height / 2);
+        const destination = rl.Rectangle.init(self.position.x, self.position.y, self.width * self.effectiveScale, self.height * self.effectiveScale);
 
-        // Draw with a slight yellow glow if mature and has pollen
         if (self.state == 4 and self.hasPolen) {
-            // Draw a slightly larger yellow version underneath for a "glow" effect
-            const glowDest = rl.Rectangle.init(self.position.x - 2, self.position.y - 2, (self.width * self.scale) + 4, (self.height * self.scale) + 4);
-            rl.drawTexturePro(self.texture, source, glowDest, origin, 0, rl.Color.init(255, 255, 100, 128));
-            rl.drawTexturePro(self.texture, source, destination, origin, 0, rl.Color.white);
+            const glowDest = rl.Rectangle.init(self.position.x - 2, self.position.y - 2, (self.width * self.effectiveScale) + 4, (self.height * self.effectiveScale) + 4);
+            rl.drawTexturePro(self.texture, source, glowDest, rl.Vector2.init(0, 0), 0, rl.Color.init(255, 255, 100, 128));
+            rl.drawTexturePro(self.texture, source, destination, rl.Vector2.init(0, 0), 0, rl.Color.white);
         } else {
-            rl.drawTexturePro(self.texture, source, destination, origin, 0, rl.Color.white);
+            rl.drawTexturePro(self.texture, source, destination, rl.Vector2.init(0, 0), 0, rl.Color.white);
         }
     }
 
