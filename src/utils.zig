@@ -24,29 +24,45 @@ pub fn xyToIso(x: f32, y: f32, width: f32, height: f32, offsetX: f32, offsetY: f
     return rl.Vector2.init(i, j);
 }
 
-// Determines if a point (x, y) in screen coordinates is inside an isometric tile
 pub fn isPointInIsometricTile(x: f32, y: f32, tileX: f32, tileY: f32, tileWidth: f32, tileHeight: f32, offsetX: f32, offsetY: f32, scale: f32) bool {
-    // Get the position of the tile in screen coordinates
     const tileScreenPos = isoToXY(tileX, tileY, tileWidth, tileHeight, offsetX, offsetY, scale);
 
-    // Calculate the half dimensions of the tile
     const halfWidth = tileWidth * scale / 2.0;
     const halfHeight = tileHeight * scale / 2.0;
 
-    // Calculate the center of the tile
     const tileCenterX = tileScreenPos.x + halfWidth;
-    const tileCenterY = tileScreenPos.y + halfHeight / 2.0; // Adjust center for isometric view
+    const tileCenterY = tileScreenPos.y + halfHeight / 2.0;
 
-    // Calculate relative position from center
     const relX = x - tileCenterX;
     const relY = y - tileCenterY;
 
-    // Diamond shape test for isometric tile
-    // For a diamond/rhombus shape, we check if the point is within the shape
-    // using a transformed coordinate system
     const normalizedX = @abs(relX) / halfWidth;
     const normalizedY = @abs(relY) / halfHeight;
 
-    // This creates a diamond-shaped hitbox, which is better for isometric tiles
     return normalizedX + normalizedY * 2.0 <= 1.0;
+}
+
+pub fn calculateCenteredGridOffset(gridWidth: usize, gridHeight: usize, tileWidth: f32, tileHeight: f32, scale: f32, viewportWidth: f32, viewportHeight: f32) rl.Vector2 {
+    const topCorner = rl.Vector2.init(0, 0);
+    const rightCorner = rl.Vector2.init(@floatFromInt(gridWidth - 1), 0);
+    const bottomCorner = rl.Vector2.init(@floatFromInt(gridWidth - 1), @floatFromInt(gridHeight - 1));
+    const leftCorner = rl.Vector2.init(0, @floatFromInt(gridHeight - 1));
+
+    const topScreen = isoToXY(topCorner.x, topCorner.y, tileWidth, tileHeight, 0, 0, scale);
+    const rightScreen = isoToXY(rightCorner.x, rightCorner.y, tileWidth, tileHeight, 0, 0, scale);
+    const bottomScreen = isoToXY(bottomCorner.x, bottomCorner.y, tileWidth, tileHeight, 0, 0, scale);
+    const leftScreen = isoToXY(leftCorner.x, leftCorner.y, tileWidth, tileHeight, 0, 0, scale);
+
+    const minX = @min(@min(topScreen.x, rightScreen.x), @min(bottomScreen.x, leftScreen.x));
+    const maxX = @max(@max(topScreen.x, rightScreen.x), @max(bottomScreen.x, leftScreen.x)) + tileWidth * scale;
+    const minY = @min(@min(topScreen.y, rightScreen.y), @min(bottomScreen.y, leftScreen.y));
+    const maxY = @max(@max(topScreen.y, rightScreen.y), @max(bottomScreen.y, leftScreen.y)) + tileHeight * scale;
+
+    const gridScreenWidth = maxX - minX;
+    const gridScreenHeight = maxY - minY;
+
+    const offsetX = (viewportWidth - gridScreenWidth) / 2.0 - minX;
+    const offsetY = (viewportHeight - gridScreenHeight) / 2.0 - minY;
+
+    return rl.Vector2.init(offsetX, offsetY);
 }

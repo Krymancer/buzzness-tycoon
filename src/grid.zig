@@ -16,7 +16,13 @@ pub const Grid = struct {
     scale: f32,
 
     debug: bool,
-    pub fn init(width: usize, height: usize, offset: rl.Vector2) !@This() {
+    pub fn init(width: usize, height: usize, viewportWidth: f32, viewportHeight: f32) !@This() {
+        const tileWidth = 32;
+        const tileHeight = 32;
+        const scale = 3;
+
+        const offset = utils.calculateCenteredGridOffset(width, height, tileWidth, tileHeight, scale, viewportWidth, viewportHeight);
+
         return .{
             .width = width,
             .height = height,
@@ -24,9 +30,9 @@ pub const Grid = struct {
             .offset = offset,
 
             .tileTexture = try assets.loadTextureFromMemory(assets.grass_cube_png),
-            .tileWidth = 32,
-            .tileHeight = 32,
-            .scale = 3,
+            .tileWidth = tileWidth,
+            .tileHeight = tileHeight,
+            .scale = scale,
 
             .debug = true,
         };
