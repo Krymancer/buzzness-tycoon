@@ -119,13 +119,7 @@ pub const Bee = struct {
         } else {
             rl.drawTextureEx(self.texture, self.position, 0, self.effectiveScale, rl.Color.white);
         }
-
-        // Debug border
-        const width = self.width * self.effectiveScale;
-        const height = self.height * self.effectiveScale;
-        rl.drawRectangleLines(@intFromFloat(self.position.x), @intFromFloat(self.position.y), @intFromFloat(width), @intFromFloat(height), rl.Color.blue);
     }
-
     pub fn findNearestFlower(self: @This(), flowers: []Flower, gridOffset: rl.Vector2, gridScale: f32) ?usize {
         // First try to find mature flowers with pollen
         var minimumDistanceSoFar = std.math.floatMax(f32);

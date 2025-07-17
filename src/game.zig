@@ -117,32 +117,28 @@ pub const Game = struct {
     pub fn drawSpriteAtGridPosition(self: *@This(), texture: rl.Texture, i: f32, j: f32, sourceRect: rl.Rectangle, scale: f32, color: rl.Color) void {
         const tilePosition = utils.isoToXY(i, j, 32, 32, self.grid.offset.x, self.grid.offset.y, self.grid.scale);
         const effectiveScale = scale * (self.grid.scale / 3.0);
-        
+
         // Calculate the center of the tile's top surface
         const tileWidth = 32 * self.grid.scale;
         const tileHeight = 32 * self.grid.scale;
-        
+
         // Center horizontally on the tile
         const centeredX = tilePosition.x + (tileWidth - sourceRect.width * effectiveScale) / 2.0;
-        
+
         // Position on the top surface of the isometric cube (top 1/4 of the tile)
         const centeredY = tilePosition.y + (tileHeight * 0.25) - (sourceRect.height * effectiveScale);
-        
+
         const destination = rl.Rectangle.init(centeredX, centeredY, sourceRect.width * effectiveScale, sourceRect.height * effectiveScale);
 
         rl.drawTexturePro(texture, sourceRect, destination, rl.Vector2.init(0, 0), 0, color);
-        
-        // Debug border
-        rl.drawRectangleLines(@intFromFloat(destination.x), @intFromFloat(destination.y), @intFromFloat(destination.width), @intFromFloat(destination.height), rl.Color.red);
-    }    pub fn drawSpriteAtWorldPosition(self: *@This(), texture: rl.Texture, worldPos: rl.Vector2, sourceRect: rl.Rectangle, scale: f32, color: rl.Color) void {
+    }
+
+    pub fn drawSpriteAtWorldPosition(self: *@This(), texture: rl.Texture, worldPos: rl.Vector2, sourceRect: rl.Rectangle, scale: f32, color: rl.Color) void {
         const effectiveScale = scale * (self.grid.scale / 3.0);
 
         const destination = rl.Rectangle.init(worldPos.x, worldPos.y, sourceRect.width * effectiveScale, sourceRect.height * effectiveScale);
 
         rl.drawTexturePro(texture, sourceRect, destination, rl.Vector2.init(0, 0), 0, color);
-
-        // Debug border
-        rl.drawRectangleLines(@intFromFloat(destination.x), @intFromFloat(destination.y), @intFromFloat(destination.width), @intFromFloat(destination.height), rl.Color.red);
     }
 
     pub fn run(self: *@This()) !void {

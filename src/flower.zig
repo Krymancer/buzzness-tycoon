@@ -52,10 +52,10 @@ pub const Flower = struct {
         // Calculate the center of the tile's top surface (same logic as drawSpriteAtGridPosition)
         const tileWidth = 32 * gridScale;
         const tileHeight = 32 * gridScale;
-        
+
         // Center horizontally on the tile
         const centeredX = tilePosition.x + (tileWidth - self.width * effectiveScale) / 2.0;
-        
+
         // Position on the top surface of the isometric cube (top 1/4 of the tile)
         const centeredY = tilePosition.y + (tileHeight * 0.25) - (self.height * effectiveScale);
 

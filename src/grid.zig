@@ -65,15 +65,12 @@ pub const Grid = struct {
     }
 
     pub fn getRandomPositionInBounds(self: @This()) rl.Vector2 {
-        // Get a random position within the grid's visual bounds
         const scaledTileWidth = self.tileWidth * self.scale;
         const scaledTileHeight = self.tileHeight * self.scale;
 
-        // Calculate the approximate grid bounds
         const gridWidth = @as(f32, @floatFromInt(self.width)) * scaledTileWidth;
         const gridHeight = @as(f32, @floatFromInt(self.height)) * scaledTileHeight;
 
-        // Generate random position within the grid bounds
         const x = self.offset.x + @as(f32, @floatFromInt(rl.getRandomValue(0, @as(i32, @intFromFloat(gridWidth)))));
         const y = self.offset.y + @as(f32, @floatFromInt(rl.getRandomValue(0, @as(i32, @intFromFloat(gridHeight)))));
 
@@ -100,11 +97,6 @@ pub const Grid = struct {
                 } else {
                     rl.drawTextureEx(self.tileTexture, position, 0, self.scale, rl.Color.white);
                 }
-                
-                // Debug border for tiles
-                const tileWidth = self.tileWidth * self.scale;
-                const tileHeight = self.tileHeight * self.scale;
-                rl.drawRectangleLines(@intFromFloat(position.x), @intFromFloat(position.y), @intFromFloat(tileWidth), @intFromFloat(tileHeight), rl.Color.blue);
             }
         }
     }
