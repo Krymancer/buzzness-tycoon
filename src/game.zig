@@ -268,10 +268,9 @@ pub const Game = struct {
                 const randomValue = @as(f32, @floatFromInt(rl.getRandomValue(0, 1000))) / 1000.0;
 
                 if (randomValue < spawnChanceThisFrame) {
-                    if (self.trySpawnFlower(bee.position)) |spawned| {
-                        if (spawned) {
-                            bee.carryingPollen = false;
-                        }
+                    const spawned = try self.trySpawnFlower(bee.position);
+                    if (spawned) {
+                        bee.carryingPollen = false;
                     }
                 }
             }
