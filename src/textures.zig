@@ -4,9 +4,6 @@ const std = @import("std");
 const assets = @import("assets.zig");
 const Flowers = @import("flower.zig").Flowers;
 
-// Load textures from embedded assets
-// This way we don't need external files when distributing the game
-
 pub const Textures = struct {
     bee: rl.Texture,
     rose: rl.Texture,

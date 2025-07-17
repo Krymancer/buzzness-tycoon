@@ -13,7 +13,7 @@ pub const Bee = struct {
     scale: f32,
     effectiveScale: f32,
 
-    targetFlowerIndex: ?usize, // Index of the target flower instead of position reference
+    targetFlowerIndex: ?usize,
     targetLock: bool,
     timeAlive: f32,
     timeSpan: f32,
@@ -52,8 +52,7 @@ pub const Bee = struct {
     }
 
     pub fn updateScale(self: *@This(), gridScale: f32) void {
-        // Update the effective scale based on grid scale
-        self.effectiveScale = self.scale * (gridScale / 3.0); // 3.0 is the base grid scale
+        self.effectiveScale = self.scale * (gridScale / 3.0);
     }
 
     pub fn update(self: *@This(), deltaTime: f32, flowers: []Flower, gridOffset: rl.Vector2, gridScale: f32) void {
@@ -65,46 +64,37 @@ pub const Bee = struct {
             self.dead = true;
         }
 
-        // If we don't have any flower locked try to find nearest flower
         if (!self.targetLock) {
             self.targetFlowerIndex = self.findNearestFlower(flowers, gridOffset, gridScale);
             self.targetLock = true;
         } else {
-            // Check if we have a valid target flower index
             if (self.targetFlowerIndex) |flowerIndex| {
                 if (flowerIndex < flowers.len) {
                     const targetFlower = &flowers[flowerIndex];
                     const targetPos = targetFlower.getWorldPosition(gridOffset, gridScale);
 
-                    // Check if we've reached the target flower
                     const distance = rl.math.vector2Distance(self.position, targetPos);
-                    const arrivalThreshold: f32 = 5.0; // How close is close enough
+                    const arrivalThreshold: f32 = 5.0;
 
                     if (distance < arrivalThreshold) {
-                        // We've reached the flower, check if it has pollen
                         if (targetFlower.state == 4 and targetFlower.hasPolen) {
-                            // Collect pollen
                             targetFlower.collectPolen();
                             self.carryingPollen = true;
                             self.pollenCollected += 1;
                         }
 
-                        // After collecting (or failing to collect) pollen, look for a new target
                         self.targetLock = false;
                         self.targetFlowerIndex = null;
                     } else {
-                        // Move to nearest flower bit by bit
                         const leapFactor: f32 = 0.9;
                         self.position.x += (targetPos.x - self.position.x) * leapFactor * deltaTime;
                         self.position.y += (targetPos.y - self.position.y) * leapFactor * deltaTime;
                     }
                 } else {
-                    // Invalid flower index, unlock to find a new one
                     self.targetLock = false;
                     self.targetFlowerIndex = null;
                 }
             } else {
-                // No valid target, unlock to find a new one
                 self.targetLock = false;
             }
         }
@@ -113,7 +103,6 @@ pub const Bee = struct {
     pub fn draw(self: @This()) void {
         if (self.dead) return;
 
-        // Draw bee with yellow tint if carrying pollen, using effective scale
         if (self.carryingPollen) {
             rl.drawTextureEx(self.texture, self.position, 0, self.effectiveScale, rl.Color.yellow);
         } else {
@@ -121,12 +110,10 @@ pub const Bee = struct {
         }
     }
     pub fn findNearestFlower(self: @This(), flowers: []Flower, gridOffset: rl.Vector2, gridScale: f32) ?usize {
-        // First try to find mature flowers with pollen
         var minimumDistanceSoFar = std.math.floatMax(f32);
         var nearestFlowerIndex: ?usize = null;
         var foundFlowerWithPollen = false;
 
-        // Collect viable flowers within a reasonable distance
         var viableFlowers = std.ArrayList(usize).init(std.heap.page_allocator);
         defer viableFlowers.deinit();
 
@@ -148,7 +135,7 @@ pub const Bee = struct {
         // Second pass: collect all flowers with pollen that are within 25% of the minimum distance
         // This creates a "close enough" group of flowers to randomize between
         if (foundFlowerWithPollen) {
-            const distanceThreshold = minimumDistanceSoFar * 1.25; // 25% margin
+            const distanceThreshold = minimumDistanceSoFar * 1.25;
 
             for (flowers, 0..) |*element, index| {
                 if (element.state == 4 and element.hasPolen) {

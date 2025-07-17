@@ -6,7 +6,7 @@ pub const Flowers = enum { rose, tulip, dandelion };
 
 pub const Flower = struct {
     state: f32,
-    gridPosition: rl.Vector2, // Store grid position (i, j) instead of world position
+    gridPosition: rl.Vector2,
 
     texture: rl.Texture,
     width: f32,
