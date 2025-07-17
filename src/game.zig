@@ -70,8 +70,7 @@ pub const Game = struct {
 
         var bees = std.ArrayList(Bee).init(allocator);
 
-        for (0..5) |index| {
-            _ = index;
+        for (0..5) |_| {
             const randomPos = grid.getRandomPositionInBounds();
             var bee = Bee.init(randomPos.x, randomPos.y, textures.bee);
             bee.updateScale(grid.scale); // Set initial scale based on grid scale
@@ -122,18 +121,13 @@ pub const Game = struct {
         if (wheelMove != 0.0) {
             const zoomSpeed = 0.3;
             const zoomDelta = wheelMove * zoomSpeed;
-
-            // Apply zoom to grid
             self.grid.zoom(zoomDelta);
 
-            // Update flower positions with new grid scale and offset
             for (self.flowers, 0..) |*flower, index| {
                 const i: f32 = @as(f32, @floatFromInt(index / self.grid.height));
                 const j: f32 = @as(f32, @floatFromInt(@mod(index, self.grid.width)));
                 flower.setPosition(i, j, self.grid.offset, self.grid.scale);
             }
-
-            // Update bee scales - they will automatically follow their target flowers
             for (self.bees.items) |*bee| {
                 bee.updateScale(self.grid.scale);
             }
@@ -186,10 +180,9 @@ pub const Game = struct {
 
         if (self.ui.draw(self.resources.honey, self.bees.items.len)) {
             if (self.resources.spendHoney(10.0)) {
-                const randomPos = self.grid.getRandomPositionInBounds();
-                var bee = Bee.init(randomPos.x, randomPos.y, self.textures.bee);
-                bee.updateScale(self.grid.scale); // Set scale based on current grid scale
-                try self.bees.append(bee);
+                const x: f32 = @floatFromInt(rl.getRandomValue(100, 900));
+                const y: f32 = @floatFromInt(rl.getRandomValue(200, 700));
+                try self.bees.append(Bee.init(x, y, self.textures.bee));
             }
         }
 
