@@ -16,7 +16,7 @@ pub const UI = struct {
     pub fn init() @This() {
         // Apply the Catppuccin Mocha theme
         theme.applyCatppuccinMochaTheme();
-        
+
         return .{};
     }
 
