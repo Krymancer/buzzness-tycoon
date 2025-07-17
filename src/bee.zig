@@ -13,7 +13,7 @@ pub const Bee = struct {
     scale: f32,
     effectiveScale: f32,
 
-    targetFlowerPosition: ?*rl.Vector2, // Reference to the flower's position
+    targetFlowerIndex: ?usize, // Index of the target flower instead of position reference
     targetLock: bool,
     timeAlive: f32,
     timeSpan: f32,
@@ -34,7 +34,7 @@ pub const Bee = struct {
 
             .position = rl.Vector2.init(x, y),
 
-            .targetFlowerPosition = null,
+            .targetFlowerIndex = null,
             .targetLock = false,
             .timeAlive = 0,
             .timeSpan = @floatFromInt(rl.getRandomValue(30, 70)),
@@ -56,7 +56,7 @@ pub const Bee = struct {
         self.effectiveScale = self.scale * (gridScale / 3.0); // 3.0 is the base grid scale
     }
 
-    pub fn update(self: *@This(), deltaTime: f32, flowers: []Flower) void {
+    pub fn update(self: *@This(), deltaTime: f32, flowers: []Flower, gridOffset: rl.Vector2, gridScale: f32) void {
         if (self.dead) return;
 
         self.timeAlive += deltaTime;
@@ -67,38 +67,41 @@ pub const Bee = struct {
 
         // If we don't have any flower locked try to find nearest flower
         if (!self.targetLock) {
-            self.targetFlowerPosition = self.findNearestFlower(flowers);
+            self.targetFlowerIndex = self.findNearestFlower(flowers, gridOffset, gridScale);
             self.targetLock = true;
         } else {
-            // Check if we have a valid target flower position
-            if (self.targetFlowerPosition) |targetPos| {
-                // Check if we've reached the target flower
-                const distance = rl.math.vector2Distance(self.position, targetPos.*);
-                const arrivalThreshold: f32 = 5.0; // How close is close enough
+            // Check if we have a valid target flower index
+            if (self.targetFlowerIndex) |flowerIndex| {
+                if (flowerIndex < flowers.len) {
+                    const targetFlower = &flowers[flowerIndex];
+                    const targetPos = targetFlower.getWorldPosition(gridOffset, gridScale);
 
-                if (distance < arrivalThreshold) {
-                    // We've reached the flower, check if it has pollen
-                    for (flowers) |*flower| {
-                        const flowerDistance = rl.math.vector2Distance(flower.position, targetPos.*);
-                        if (flowerDistance < 1.0) { // If this is the target flower
-                            if (flower.state == 4 and flower.hasPolen) {
-                                // Collect pollen
-                                flower.collectPolen();
-                                self.carryingPollen = true;
-                                self.pollenCollected += 1;
-                            }
+                    // Check if we've reached the target flower
+                    const distance = rl.math.vector2Distance(self.position, targetPos);
+                    const arrivalThreshold: f32 = 5.0; // How close is close enough
 
-                            // After collecting (or failing to collect) pollen, look for a new target
-                            self.targetLock = false;
-                            self.targetFlowerPosition = null;
-                            break;
+                    if (distance < arrivalThreshold) {
+                        // We've reached the flower, check if it has pollen
+                        if (targetFlower.state == 4 and targetFlower.hasPolen) {
+                            // Collect pollen
+                            targetFlower.collectPolen();
+                            self.carryingPollen = true;
+                            self.pollenCollected += 1;
                         }
+
+                        // After collecting (or failing to collect) pollen, look for a new target
+                        self.targetLock = false;
+                        self.targetFlowerIndex = null;
+                    } else {
+                        // Move to nearest flower bit by bit
+                        const leapFactor: f32 = 0.9;
+                        self.position.x += (targetPos.x - self.position.x) * leapFactor * deltaTime;
+                        self.position.y += (targetPos.y - self.position.y) * leapFactor * deltaTime;
                     }
                 } else {
-                    // Move to nearest flower bit by bit
-                    const leapFactor: f32 = 0.9;
-                    self.position.x += (targetPos.*.x - self.position.x) * leapFactor * deltaTime;
-                    self.position.y += (targetPos.*.y - self.position.y) * leapFactor * deltaTime;
+                    // Invalid flower index, unlock to find a new one
+                    self.targetLock = false;
+                    self.targetFlowerIndex = null;
                 }
             } else {
                 // No valid target, unlock to find a new one
@@ -116,27 +119,33 @@ pub const Bee = struct {
         } else {
             rl.drawTextureEx(self.texture, self.position, 0, self.effectiveScale, rl.Color.white);
         }
+
+        // Debug border
+        const width = self.width * self.effectiveScale;
+        const height = self.height * self.effectiveScale;
+        rl.drawRectangleLines(@intFromFloat(self.position.x), @intFromFloat(self.position.y), @intFromFloat(width), @intFromFloat(height), rl.Color.blue);
     }
 
-    pub fn findNearestFlower(self: @This(), flowers: []Flower) ?*rl.Vector2 {
+    pub fn findNearestFlower(self: @This(), flowers: []Flower, gridOffset: rl.Vector2, gridScale: f32) ?usize {
         // First try to find mature flowers with pollen
         var minimumDistanceSoFar = std.math.floatMax(f32);
-        var nearestFlowerPtr: ?*rl.Vector2 = null;
+        var nearestFlowerIndex: ?usize = null;
         var foundFlowerWithPollen = false;
 
         // Collect viable flowers within a reasonable distance
-        var viableFlowers = std.ArrayList(*rl.Vector2).init(std.heap.page_allocator);
+        var viableFlowers = std.ArrayList(usize).init(std.heap.page_allocator);
         defer viableFlowers.deinit();
 
         // First pass: look for mature flowers with pollen and find the minimum distance
-        for (flowers) |*element| {
+        for (flowers, 0..) |*element, index| {
             // Only consider mature flowers with pollen
             if (element.state == 4 and element.hasPolen) {
-                const distance = rl.math.vector2DistanceSqr(element.position, self.position);
+                const flowerWorldPos = element.getWorldPosition(gridOffset, gridScale);
+                const distance = rl.math.vector2DistanceSqr(flowerWorldPos, self.position);
 
                 if (distance < minimumDistanceSoFar) {
                     minimumDistanceSoFar = distance;
-                    nearestFlowerPtr = &element.position;
+                    nearestFlowerIndex = index;
                     foundFlowerWithPollen = true;
                 }
             }
@@ -147,11 +156,12 @@ pub const Bee = struct {
         if (foundFlowerWithPollen) {
             const distanceThreshold = minimumDistanceSoFar * 1.25; // 25% margin
 
-            for (flowers) |*element| {
+            for (flowers, 0..) |*element, index| {
                 if (element.state == 4 and element.hasPolen) {
-                    const distance = rl.math.vector2DistanceSqr(element.position, self.position);
+                    const flowerWorldPos = element.getWorldPosition(gridOffset, gridScale);
+                    const distance = rl.math.vector2DistanceSqr(flowerWorldPos, self.position);
                     if (distance <= distanceThreshold) {
-                        viableFlowers.append(&element.position) catch {};
+                        viableFlowers.append(index) catch {};
                     }
                 }
             }
@@ -161,22 +171,23 @@ pub const Bee = struct {
                 const randomIndex = rl.getRandomValue(0, @intCast(viableFlowers.items.len - 1));
                 return viableFlowers.items[@intCast(randomIndex)];
             } else if (foundFlowerWithPollen) {
-                return nearestFlowerPtr;
+                return nearestFlowerIndex;
             }
         }
 
         // If no flower with pollen found, find any flower (even without pollen)
         minimumDistanceSoFar = std.math.floatMax(f32);
 
-        for (flowers) |*element| {
-            const distance = rl.math.vector2DistanceSqr(element.position, self.position);
+        for (flowers, 0..) |*element, index| {
+            const flowerWorldPos = element.getWorldPosition(gridOffset, gridScale);
+            const distance = rl.math.vector2DistanceSqr(flowerWorldPos, self.position);
 
             if (distance < minimumDistanceSoFar) {
                 minimumDistanceSoFar = distance;
-                nearestFlowerPtr = &element.position;
+                nearestFlowerIndex = index;
             }
         }
 
-        return nearestFlowerPtr;
+        return nearestFlowerIndex;
     }
 };

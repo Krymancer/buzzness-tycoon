@@ -6,7 +6,7 @@ pub const Flowers = enum { rose, tulip, dandelion };
 
 pub const Flower = struct {
     state: f32,
-    position: rl.Vector2,
+    gridPosition: rl.Vector2, // Store grid position (i, j) instead of world position
 
     texture: rl.Texture,
     width: f32,
@@ -19,22 +19,20 @@ pub const Flower = struct {
     hasPolen: bool,
 
     scale: f32,
-    effectiveScale: f32,
 
     debug: bool,
 
     timeAlive: f32,
 
-    pub fn init(texture: rl.Texture) @This() {
+    pub fn init(texture: rl.Texture, i: f32, j: f32) @This() {
         return .{
             .state = 0,
             .texture = texture,
             .width = 32,
             .height = 32,
             .scale = 2,
-            .effectiveScale = 2,
 
-            .position = rl.Vector2.init(0, 0),
+            .gridPosition = rl.Vector2.init(i, j),
             .timeAlive = 0,
 
             .randomGrowScale = @floatFromInt(rl.getRandomValue(1, 10)),
@@ -47,30 +45,21 @@ pub const Flower = struct {
         };
     }
 
-    pub fn setPosition(self: *@This(), i: f32, j: f32, offset: rl.Vector2, gridScale: f32) void {
-        const tilePosition = utils.isoToXY(i, j, self.width, self.height, offset.x, offset.y, gridScale);
-        self.effectiveScale = self.scale * (gridScale / 3.0);
+    pub fn getWorldPosition(self: @This(), offset: rl.Vector2, gridScale: f32) rl.Vector2 {
+        const tilePosition = utils.isoToXY(self.gridPosition.x, self.gridPosition.y, self.width, self.height, offset.x, offset.y, gridScale);
+        const effectiveScale = self.scale * (gridScale / 3.0);
 
-        const scaledTileWidth = self.width * gridScale;
-        const scaledTileHeight = self.height * gridScale;
+        // Calculate the center of the tile's top surface (same logic as drawSpriteAtGridPosition)
+        const tileWidth = 32 * gridScale;
+        const tileHeight = 32 * gridScale;
+        
+        // Center horizontally on the tile
+        const centeredX = tilePosition.x + (tileWidth - self.width * effectiveScale) / 2.0;
+        
+        // Position on the top surface of the isometric cube (top 1/4 of the tile)
+        const centeredY = tilePosition.y + (tileHeight * 0.25) - (self.height * effectiveScale);
 
-        const flowerWidth = self.width * self.effectiveScale;
-        const flowerHeight = self.height * self.effectiveScale;
-
-        self.position = rl.Vector2.init(tilePosition.x + (scaledTileWidth - flowerWidth) / 2.0, tilePosition.y - (scaledTileHeight - flowerHeight));
-    }
-
-    pub fn draw(self: *@This()) void {
-        const source = rl.Rectangle.init(self.state * self.width, 0, self.width, self.height);
-        const destination = rl.Rectangle.init(self.position.x, self.position.y, self.width * self.effectiveScale, self.height * self.effectiveScale);
-
-        if (self.state == 4 and self.hasPolen) {
-            const glowDest = rl.Rectangle.init(self.position.x - 2, self.position.y - 2, (self.width * self.effectiveScale) + 4, (self.height * self.effectiveScale) + 4);
-            rl.drawTexturePro(self.texture, source, glowDest, rl.Vector2.init(0, 0), 0, rl.Color.init(255, 255, 100, 128));
-            rl.drawTexturePro(self.texture, source, destination, rl.Vector2.init(0, 0), 0, rl.Color.white);
-        } else {
-            rl.drawTexturePro(self.texture, source, destination, rl.Vector2.init(0, 0), 0, rl.Color.white);
-        }
+        return rl.Vector2.init(centeredX, centeredY);
     }
 
     pub fn update(self: *@This(), deltaTime: f32) void {

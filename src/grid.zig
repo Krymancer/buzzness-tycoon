@@ -100,6 +100,11 @@ pub const Grid = struct {
                 } else {
                     rl.drawTextureEx(self.tileTexture, position, 0, self.scale, rl.Color.white);
                 }
+                
+                // Debug border for tiles
+                const tileWidth = self.tileWidth * self.scale;
+                const tileHeight = self.tileHeight * self.scale;
+                rl.drawRectangleLines(@intFromFloat(position.x), @intFromFloat(position.y), @intFromFloat(tileWidth), @intFromFloat(tileHeight), rl.Color.blue);
             }
         }
     }

@@ -30,6 +30,11 @@ pub const Game = struct {
     resources: Resources,
     ui: UI,
 
+    // Camera movement
+    cameraOffset: rl.Vector2,
+    isDragging: bool,
+    lastMousePos: rl.Vector2,
+
     allocator: std.mem.Allocator,
 
     pub fn init(width: f32, height: f32, allocator: std.mem.Allocator) !@This() {
@@ -63,8 +68,7 @@ pub const Game = struct {
                 const flowerTexture = textures.getFlowerTexture(flowerType);
                 const i: f32 = @as(f32, @floatFromInt(index / grid.height));
                 const j: f32 = @as(f32, @floatFromInt(@mod(index, grid.width)));
-                element.* = Flower.init(flowerTexture);
-                element.setPosition(i, j, grid.offset, grid.scale);
+                element.* = Flower.init(flowerTexture, i, j);
             }
         }
 
@@ -89,6 +93,10 @@ pub const Game = struct {
             .resources = Resources.init(),
             .ui = UI.init(),
 
+            .cameraOffset = rl.Vector2.init(0, 0),
+            .isDragging = false,
+            .lastMousePos = rl.Vector2.init(0, 0),
+
             .width = width,
             .height = height,
         };
@@ -104,6 +112,39 @@ pub const Game = struct {
 
         self.bees.deinit();
     }
+
+    // Centralized rendering function that handles camera offset and scaling
+    pub fn drawSpriteAtGridPosition(self: *@This(), texture: rl.Texture, i: f32, j: f32, sourceRect: rl.Rectangle, scale: f32, color: rl.Color) void {
+        const tilePosition = utils.isoToXY(i, j, 32, 32, self.grid.offset.x, self.grid.offset.y, self.grid.scale);
+        const effectiveScale = scale * (self.grid.scale / 3.0);
+        
+        // Calculate the center of the tile's top surface
+        const tileWidth = 32 * self.grid.scale;
+        const tileHeight = 32 * self.grid.scale;
+        
+        // Center horizontally on the tile
+        const centeredX = tilePosition.x + (tileWidth - sourceRect.width * effectiveScale) / 2.0;
+        
+        // Position on the top surface of the isometric cube (top 1/4 of the tile)
+        const centeredY = tilePosition.y + (tileHeight * 0.25) - (sourceRect.height * effectiveScale);
+        
+        const destination = rl.Rectangle.init(centeredX, centeredY, sourceRect.width * effectiveScale, sourceRect.height * effectiveScale);
+
+        rl.drawTexturePro(texture, sourceRect, destination, rl.Vector2.init(0, 0), 0, color);
+        
+        // Debug border
+        rl.drawRectangleLines(@intFromFloat(destination.x), @intFromFloat(destination.y), @intFromFloat(destination.width), @intFromFloat(destination.height), rl.Color.red);
+    }    pub fn drawSpriteAtWorldPosition(self: *@This(), texture: rl.Texture, worldPos: rl.Vector2, sourceRect: rl.Rectangle, scale: f32, color: rl.Color) void {
+        const effectiveScale = scale * (self.grid.scale / 3.0);
+
+        const destination = rl.Rectangle.init(worldPos.x, worldPos.y, sourceRect.width * effectiveScale, sourceRect.height * effectiveScale);
+
+        rl.drawTexturePro(texture, sourceRect, destination, rl.Vector2.init(0, 0), 0, color);
+
+        // Debug border
+        rl.drawRectangleLines(@intFromFloat(destination.x), @intFromFloat(destination.y), @intFromFloat(destination.width), @intFromFloat(destination.height), rl.Color.red);
+    }
+
     pub fn run(self: *@This()) !void {
         while (!rl.windowShouldClose()) {
             self.input();
@@ -117,22 +158,44 @@ pub const Game = struct {
             rl.toggleFullscreen();
         }
 
+        // Handle mouse dragging for camera movement
+        const mousePos = rl.getMousePosition();
+
+        if (rl.isMouseButtonPressed(rl.MouseButton.left)) {
+            self.isDragging = true;
+            self.lastMousePos = mousePos;
+        }
+
+        if (rl.isMouseButtonReleased(rl.MouseButton.left)) {
+            self.isDragging = false;
+        }
+
+        if (self.isDragging) {
+            const mouseDelta = rl.Vector2.init(mousePos.x - self.lastMousePos.x, mousePos.y - self.lastMousePos.y);
+
+            self.cameraOffset.x += mouseDelta.x;
+            self.cameraOffset.y += mouseDelta.y;
+
+            // Update grid offset
+            self.grid.offset.x += mouseDelta.x;
+            self.grid.offset.y += mouseDelta.y;
+
+            self.lastMousePos = mousePos;
+        }
+
         const wheelMove = rl.getMouseWheelMove();
         if (wheelMove != 0.0) {
             const zoomSpeed = 0.3;
             const zoomDelta = wheelMove * zoomSpeed;
             self.grid.zoom(zoomDelta);
 
-            for (self.flowers, 0..) |*flower, index| {
-                const i: f32 = @as(f32, @floatFromInt(index / self.grid.height));
-                const j: f32 = @as(f32, @floatFromInt(@mod(index, self.grid.width)));
-                flower.setPosition(i, j, self.grid.offset, self.grid.scale);
-            }
+            // Update bee scales
             for (self.bees.items) |*bee| {
                 bee.updateScale(self.grid.scale);
             }
         }
     }
+
     pub fn update(self: *@This()) !void {
         const deltaTime = rl.getFrameTime();
 
@@ -142,7 +205,7 @@ pub const Game = struct {
         for (self.bees.items, 0..self.bees.items.len) |*bee, index| {
             const previousPollen = bee.pollenCollected;
 
-            bee.update(deltaTime, self.flowers);
+            bee.update(deltaTime, self.flowers, self.grid.offset, self.grid.scale);
 
             if (bee.pollenCollected > previousPollen) {
                 const newHoneyAmount = bee.pollenCollected - previousPollen;
@@ -162,6 +225,7 @@ pub const Game = struct {
             element.update(deltaTime);
         }
     }
+
     pub fn draw(self: *@This()) !void {
         rl.beginDrawing();
         defer rl.endDrawing();
@@ -170,8 +234,17 @@ pub const Game = struct {
 
         self.grid.draw();
 
-        for (self.flowers) |*element| {
-            element.draw();
+        // Draw flowers using centralized rendering
+        for (self.flowers) |*flower| {
+            const source = rl.Rectangle.init(flower.state * flower.width, 0, flower.width, flower.height);
+
+            if (flower.state == 4 and flower.hasPolen) {
+                // Draw glow effect
+                self.drawSpriteAtGridPosition(flower.texture, flower.gridPosition.x, flower.gridPosition.y, source, flower.scale + 0.1, rl.Color.init(255, 255, 100, 128));
+            }
+
+            // Draw main flower
+            self.drawSpriteAtGridPosition(flower.texture, flower.gridPosition.x, flower.gridPosition.y, source, flower.scale, rl.Color.white);
         }
 
         for (self.bees.items) |*bee| {
@@ -180,9 +253,10 @@ pub const Game = struct {
 
         if (self.ui.draw(self.resources.honey, self.bees.items.len)) {
             if (self.resources.spendHoney(10.0)) {
-                const x: f32 = @floatFromInt(rl.getRandomValue(100, 900));
-                const y: f32 = @floatFromInt(rl.getRandomValue(200, 700));
-                try self.bees.append(Bee.init(x, y, self.textures.bee));
+                const randomPos = self.grid.getRandomPositionInBounds();
+                var bee = Bee.init(randomPos.x, randomPos.y, self.textures.bee);
+                bee.updateScale(self.grid.scale); // Set scale based on current grid scale
+                try self.bees.append(bee);
             }
         }
 
