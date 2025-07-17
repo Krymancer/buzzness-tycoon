@@ -1,5 +1,7 @@
 const rl = @import("raylib");
+const rg = @import("raygui");
 const std = @import("std");
+const theme = @import("theme.zig");
 
 // TODO
 // This file should be USE like an API only
@@ -12,6 +14,9 @@ const std = @import("std");
 
 pub const UI = struct {
     pub fn init() @This() {
+        // Apply the Catppuccin Mocha theme
+        theme.applyCatppuccinMochaTheme();
+        
         return .{};
     }
 
@@ -30,19 +35,20 @@ pub const UI = struct {
         const buttonRect = rl.Rectangle.init(10, 80, buttonWidth, buttonHeight);
 
         const canAfford = honey >= 10.0;
-        const buttonColor = if (canAfford) rl.Color.yellow else rl.Color.gray;
 
-        rl.drawRectangleRec(buttonRect, buttonColor);
-        rl.drawRectangleLinesEx(buttonRect, 2, rl.Color.white);
-        rl.drawText(buttonText, @intFromFloat(buttonRect.x + 10), @intFromFloat(buttonRect.y + 10), 20, rl.Color.black);
-
-        const mousePos = rl.getMousePosition();
-        const mouseOnButton = rl.checkCollisionPointRec(mousePos, buttonRect);
-
-        if (mouseOnButton and rl.isMouseButtonReleased(rl.MouseButton.left) and canAfford) {
-            return true;
+        // Disable the button if player can't afford it
+        if (!canAfford) {
+            rg.setState(@intFromEnum(rg.State.disabled));
         }
 
-        return false;
+        // Use raygui button instead of manual rectangle drawing
+        const buttonPressed = rg.button(buttonRect, buttonText);
+
+        // Re-enable GUI if it was disabled
+        if (!canAfford) {
+            rg.setState(@intFromEnum(rg.State.normal));
+        }
+
+        return buttonPressed and canAfford;
     }
 };
