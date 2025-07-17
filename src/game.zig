@@ -15,6 +15,7 @@ const UI = @import("ui.zig").UI;
 pub const Game = struct {
     const GRID_WIDTH = 16;
     const GRID_HEIGHT = 16;
+    const FLOWER_SPAWN_CHANCE = 30;
 
     width: f32,
     height: f32,
@@ -25,12 +26,11 @@ pub const Game = struct {
     grid: Grid,
 
     bees: std.ArrayList(Bee),
-    flowers: []Flower,
+    flowers: std.ArrayList(Flower),
 
     resources: Resources,
     ui: UI,
 
-    // Camera movement
     cameraOffset: rl.Vector2,
     isDragging: bool,
     lastMousePos: rl.Vector2,
@@ -49,26 +49,30 @@ pub const Game = struct {
 
         const grid = try Grid.init(GRID_WIDTH, GRID_HEIGHT, width, height);
 
-        const flowers = try allocator.alloc(Flower, grid.width * grid.height);
-        for (flowers, 0..) |*element, index| {
-            const hasFlower = true;
-            if (hasFlower) {
-                const x = rl.getRandomValue(0, 3);
-                var flowerType: Flowers = undefined;
-                if (x == 1) {
-                    flowerType = Flowers.rose;
-                }
-                if (x == 2) {
-                    flowerType = Flowers.dandelion;
-                }
-                if (x == 3) {
-                    flowerType = Flowers.tulip;
-                }
+        var flowers = std.ArrayList(Flower).init(allocator);
 
-                const flowerTexture = textures.getFlowerTexture(flowerType);
-                const i: f32 = @as(f32, @floatFromInt(index / grid.height));
-                const j: f32 = @as(f32, @floatFromInt(@mod(index, grid.width)));
-                element.* = Flower.init(flowerTexture, i, j);
+        for (0..grid.width) |i| {
+            for (0..grid.height) |j| {
+                const shouldHaveFlower = rl.getRandomValue(1, 100) <= FLOWER_SPAWN_CHANCE;
+                if (shouldHaveFlower) {
+                    const x = rl.getRandomValue(0, 3);
+                    var flowerType: Flowers = undefined;
+                    if (x == 1) {
+                        flowerType = Flowers.rose;
+                    }
+                    if (x == 2) {
+                        flowerType = Flowers.dandelion;
+                    }
+                    if (x == 3) {
+                        flowerType = Flowers.tulip;
+                    }
+
+                    const flowerTexture = textures.getFlowerTexture(flowerType);
+                    const gridI: f32 = @as(f32, @floatFromInt(i));
+                    const gridJ: f32 = @as(f32, @floatFromInt(j));
+                    const flower = Flower.init(flowerTexture, gridI, gridJ);
+                    try flowers.append(flower);
+                }
             }
         }
 
@@ -77,7 +81,7 @@ pub const Game = struct {
         for (0..5) |_| {
             const randomPos = grid.getRandomPositionInBounds();
             var bee = Bee.init(randomPos.x, randomPos.y, textures.bee);
-            bee.updateScale(grid.scale); // Set initial scale based on grid scale
+            bee.updateScale(grid.scale);
             try bees.append(bee);
         }
 
@@ -111,9 +115,9 @@ pub const Game = struct {
         self.resources.deinit();
 
         self.bees.deinit();
+        self.flowers.deinit();
     }
 
-    // Centralized rendering function that handles camera offset and scaling
     pub fn drawSpriteAtGridPosition(self: *@This(), texture: rl.Texture, i: f32, j: f32, sourceRect: rl.Rectangle, scale: f32, color: rl.Color) void {
         const tilePosition = utils.isoToXY(i, j, 32, 32, self.grid.offset.x, self.grid.offset.y, self.grid.scale);
         const effectiveScale = scale * (self.grid.scale / 3.0);
@@ -201,7 +205,7 @@ pub const Game = struct {
         for (self.bees.items, 0..self.bees.items.len) |*bee, index| {
             const previousPollen = bee.pollenCollected;
 
-            bee.update(deltaTime, self.flowers, self.grid.offset, self.grid.scale);
+            bee.update(deltaTime, self.flowers.items, self.grid.offset, self.grid.scale);
 
             if (bee.pollenCollected > previousPollen) {
                 const newHoneyAmount = bee.pollenCollected - previousPollen;
@@ -217,7 +221,7 @@ pub const Game = struct {
             _ = self.bees.swapRemove(deadBeeIndex);
         }
 
-        for (self.flowers) |*element| {
+        for (self.flowers.items) |*element| {
             element.update(deltaTime);
         }
     }
@@ -231,7 +235,7 @@ pub const Game = struct {
         self.grid.draw();
 
         // Draw flowers using centralized rendering
-        for (self.flowers) |*flower| {
+        for (self.flowers.items) |*flower| {
             const source = rl.Rectangle.init(flower.state * flower.width, 0, flower.width, flower.height);
 
             if (flower.state == 4 and flower.hasPolen) {
