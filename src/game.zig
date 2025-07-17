@@ -145,6 +145,56 @@ pub const Game = struct {
         rl.drawTexturePro(texture, sourceRect, destination, rl.Vector2.init(0, 0), 0, color);
     }
 
+    pub fn trySpawnFlower(self: *@This(), beePosition: rl.Vector2) !bool {
+        // Convert bee world position to grid coordinates
+        const gridPos = utils.worldToGrid(beePosition, self.grid.offset, self.grid.scale);
+        const gridI = @as(usize, @intFromFloat(@max(0, @min(@as(f32, @floatFromInt(self.grid.width - 1)), gridPos.x))));
+        const gridJ = @as(usize, @intFromFloat(@max(0, @min(@as(f32, @floatFromInt(self.grid.height - 1)), gridPos.y))));
+
+        // Check if there's already a live flower at this position
+        for (self.flowers.items) |*flower| {
+            if (!flower.dead and
+                @as(usize, @intFromFloat(flower.gridPosition.x)) == gridI and
+                @as(usize, @intFromFloat(flower.gridPosition.y)) == gridJ)
+            {
+                return false; // Already has a live flower
+            }
+        }
+
+        // Look for a dead flower at this position to revive
+        for (self.flowers.items) |*flower| {
+            if (flower.dead and
+                @as(usize, @intFromFloat(flower.gridPosition.x)) == gridI and
+                @as(usize, @intFromFloat(flower.gridPosition.y)) == gridJ)
+            {
+
+                // Revive the flower with a random type
+                const flowerType = self.getRandomFlowerType();
+                flower.texture = self.textures.getFlowerTexture(flowerType);
+                flower.* = Flower.init(flower.texture, @as(f32, @floatFromInt(gridI)), @as(f32, @floatFromInt(gridJ)));
+                return true;
+            }
+        }
+
+        // If no dead flower found, spawn a new one
+        const flowerType = self.getRandomFlowerType();
+        const flowerTexture = self.textures.getFlowerTexture(flowerType);
+        const flower = Flower.init(flowerTexture, @as(f32, @floatFromInt(gridI)), @as(f32, @floatFromInt(gridJ)));
+        try self.flowers.append(flower);
+        return true;
+    }
+
+    fn getRandomFlowerType(self: *@This()) Flowers {
+        _ = self;
+        const x = rl.getRandomValue(1, 3);
+        return switch (x) {
+            1 => Flowers.rose,
+            2 => Flowers.dandelion,
+            3 => Flowers.tulip,
+            else => Flowers.rose,
+        };
+    }
+
     pub fn run(self: *@This()) !void {
         while (!rl.windowShouldClose()) {
             self.input();
@@ -212,6 +262,20 @@ pub const Game = struct {
                 self.resources.addHoney(newHoneyAmount);
             }
 
+            if (bee.carryingPollen) {
+                const spawnChancePerSecond = 0.1;
+                const spawnChanceThisFrame = spawnChancePerSecond * deltaTime;
+                const randomValue = @as(f32, @floatFromInt(rl.getRandomValue(0, 1000))) / 1000.0;
+
+                if (randomValue < spawnChanceThisFrame) {
+                    if (self.trySpawnFlower(bee.position)) |spawned| {
+                        if (spawned) {
+                            bee.carryingPollen = false;
+                        }
+                    }
+                }
+            }
+
             if (bee.dead) {
                 try deadBeesIndexes.append(index);
             }
@@ -221,8 +285,22 @@ pub const Game = struct {
             _ = self.bees.swapRemove(deadBeeIndex);
         }
 
-        for (self.flowers.items) |*element| {
+        var deadFlowersIndexes = std.ArrayList(usize).init(self.allocator);
+        defer deadFlowersIndexes.deinit();
+
+        for (self.flowers.items, 0..self.flowers.items.len) |*element, index| {
             element.update(deltaTime);
+
+            if (element.dead) {
+                try deadFlowersIndexes.append(index);
+            }
+        }
+
+        // Remove dead flowers in reverse order to maintain correct indices
+        var i: usize = deadFlowersIndexes.items.len;
+        while (i > 0) {
+            i -= 1;
+            _ = self.flowers.swapRemove(deadFlowersIndexes.items[i]);
         }
     }
 
@@ -236,6 +314,8 @@ pub const Game = struct {
 
         // Draw flowers using centralized rendering
         for (self.flowers.items) |*flower| {
+            if (flower.dead) continue;
+
             const source = rl.Rectangle.init(flower.state * flower.width, 0, flower.width, flower.height);
 
             if (flower.state == 4 and flower.hasPolen) {

@@ -119,8 +119,8 @@ pub const Bee = struct {
 
         // First pass: look for mature flowers with pollen and find the minimum distance
         for (flowers, 0..) |*element, index| {
-            // Only consider mature flowers with pollen
-            if (element.state == 4 and element.hasPolen) {
+            // Only consider mature flowers with pollen that are not dead
+            if (!element.dead and element.state == 4 and element.hasPolen) {
                 const flowerWorldPos = element.getWorldPosition(gridOffset, gridScale);
                 const distance = rl.math.vector2DistanceSqr(flowerWorldPos, self.position);
 
@@ -138,7 +138,7 @@ pub const Bee = struct {
             const distanceThreshold = minimumDistanceSoFar * 1.25;
 
             for (flowers, 0..) |*element, index| {
-                if (element.state == 4 and element.hasPolen) {
+                if (!element.dead and element.state == 4 and element.hasPolen) {
                     const flowerWorldPos = element.getWorldPosition(gridOffset, gridScale);
                     const distance = rl.math.vector2DistanceSqr(flowerWorldPos, self.position);
                     if (distance <= distanceThreshold) {
@@ -160,12 +160,14 @@ pub const Bee = struct {
         minimumDistanceSoFar = std.math.floatMax(f32);
 
         for (flowers, 0..) |*element, index| {
-            const flowerWorldPos = element.getWorldPosition(gridOffset, gridScale);
-            const distance = rl.math.vector2DistanceSqr(flowerWorldPos, self.position);
+            if (!element.dead) {
+                const flowerWorldPos = element.getWorldPosition(gridOffset, gridScale);
+                const distance = rl.math.vector2DistanceSqr(flowerWorldPos, self.position);
 
-            if (distance < minimumDistanceSoFar) {
-                minimumDistanceSoFar = distance;
-                nearestFlowerIndex = index;
+                if (distance < minimumDistanceSoFar) {
+                    minimumDistanceSoFar = distance;
+                    nearestFlowerIndex = index;
+                }
             }
         }
 

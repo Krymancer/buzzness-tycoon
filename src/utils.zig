@@ -66,3 +66,9 @@ pub fn calculateCenteredGridOffset(gridWidth: usize, gridHeight: usize, tileWidt
 
     return rl.Vector2.init(offsetX, offsetY);
 }
+
+pub fn worldToGrid(worldPos: rl.Vector2, offset: rl.Vector2, scale: f32) rl.Vector2 {
+    const tileWidth = 32.0;
+    const tileHeight = 32.0;
+    return xyToIso(worldPos.x, worldPos.y, tileWidth, tileHeight, offset.x, offset.y, scale);
+}

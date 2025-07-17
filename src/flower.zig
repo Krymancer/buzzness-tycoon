@@ -23,6 +23,9 @@ pub const Flower = struct {
     debug: bool,
 
     timeAlive: f32,
+    totalTimeAlive: f32, // Track total time alive for death check
+    timeSpan: f32,
+    dead: bool,
 
     pub fn init(texture: rl.Texture, i: f32, j: f32) @This() {
         return .{
@@ -34,6 +37,9 @@ pub const Flower = struct {
 
             .gridPosition = rl.Vector2.init(i, j),
             .timeAlive = 0,
+            .totalTimeAlive = 0,
+            .timeSpan = @floatFromInt(rl.getRandomValue(60, 120)), // Flowers live 60-120 seconds
+            .dead = false,
 
             .randomGrowScale = @floatFromInt(rl.getRandomValue(1, 10)),
             .growTreshHold = 50,
@@ -63,6 +69,14 @@ pub const Flower = struct {
     }
 
     pub fn update(self: *@This(), deltaTime: f32) void {
+        if (self.dead) return;
+
+        self.totalTimeAlive += deltaTime;
+        if (self.totalTimeAlive > self.timeSpan) {
+            self.dead = true;
+            return;
+        }
+
         // TODO: flowers are only able to procude polem when mature (state = 5)
         // add a field to indicate that the flower can have polen
         // add a cooldown each time that a bee haverst the flower polen
