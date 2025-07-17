@@ -65,16 +65,18 @@ pub const Grid = struct {
     }
 
     pub fn getRandomPositionInBounds(self: @This()) rl.Vector2 {
-        const scaledTileWidth = self.tileWidth * self.scale;
-        const scaledTileHeight = self.tileHeight * self.scale;
+        const randomI = rl.getRandomValue(0, @as(i32, @intCast(self.width - 1)));
+        const randomJ = rl.getRandomValue(0, @as(i32, @intCast(self.height - 1)));
 
-        const gridWidth = @as(f32, @floatFromInt(self.width)) * scaledTileWidth;
-        const gridHeight = @as(f32, @floatFromInt(self.height)) * scaledTileHeight;
+        const worldPos = utils.isoToXY(@as(f32, @floatFromInt(randomI)), @as(f32, @floatFromInt(randomJ)), self.tileWidth, self.tileHeight, self.offset.x, self.offset.y, self.scale);
 
-        const x = self.offset.x + @as(f32, @floatFromInt(rl.getRandomValue(0, @as(i32, @intFromFloat(gridWidth)))));
-        const y = self.offset.y + @as(f32, @floatFromInt(rl.getRandomValue(0, @as(i32, @intFromFloat(gridHeight)))));
+        const tileWidth = self.tileWidth * self.scale;
+        const tileHeight = self.tileHeight * self.scale;
 
-        return rl.Vector2.init(x, y);
+        const offsetX = @as(f32, @floatFromInt(rl.getRandomValue(0, @as(i32, @intFromFloat(tileWidth)))));
+        const offsetY = @as(f32, @floatFromInt(rl.getRandomValue(0, @as(i32, @intFromFloat(tileHeight)))));
+
+        return rl.Vector2.init(worldPos.x + offsetX, worldPos.y + offsetY);
     }
 
     pub fn deinit(self: @This()) void {
