@@ -55,7 +55,7 @@ pub const Game = struct {
             for (0..grid.height) |j| {
                 const shouldHaveFlower = rl.getRandomValue(1, 100) <= FLOWER_SPAWN_CHANCE;
                 if (shouldHaveFlower) {
-                    const x = rl.getRandomValue(0, 3);
+                    const x = rl.getRandomValue(1, 3);
                     var flowerType: Flowers = undefined;
                     if (x == 1) {
                         flowerType = Flowers.rose;
