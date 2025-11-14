@@ -22,9 +22,11 @@ pub const Bee = struct {
     carryingPollen: bool,
     pollenCollected: f32,
 
+    allocator: std.mem.Allocator,
+
     debug: bool,
 
-    pub fn init(x: f32, y: f32, texture: rl.Texture) @This() {
+    pub fn init(x: f32, y: f32, texture: rl.Texture, allocator: std.mem.Allocator) @This() {
         return .{
             .texture = texture,
             .width = 32,
@@ -43,8 +45,14 @@ pub const Bee = struct {
             .carryingPollen = false,
             .pollenCollected = 0,
 
+            .allocator = allocator,
+
             .debug = true,
         };
+    }
+
+    pub fn deinit(self: @This()) void {
+        rl.unloadTexture(self.texture);
     }
 
     pub fn enableDebug(self: *@This()) void {
@@ -114,8 +122,8 @@ pub const Bee = struct {
         var nearestFlowerIndex: ?usize = null;
         var foundFlowerWithPollen = false;
 
-        var viableFlowers = std.ArrayList(usize).init(std.heap.page_allocator);
-        defer viableFlowers.deinit();
+        var viableFlowers: std.ArrayList(usize) = .empty;
+        defer viableFlowers.deinit(self.allocator);
 
         // First pass: look for mature flowers with pollen and find the minimum distance
         for (flowers, 0..) |*element, index| {
@@ -142,7 +150,7 @@ pub const Bee = struct {
                     const flowerWorldPos = element.getWorldPosition(gridOffset, gridScale);
                     const distance = rl.math.vector2DistanceSqr(flowerWorldPos, self.position);
                     if (distance <= distanceThreshold) {
-                        viableFlowers.append(index) catch {};
+                        viableFlowers.append(self.allocator, index) catch {};
                     }
                 }
             }

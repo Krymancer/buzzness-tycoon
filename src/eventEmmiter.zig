@@ -11,7 +11,7 @@ const EventEmitter = struct {
     listeners: std.ArrayList(EventListener),
 
     pub fn init(allocator: std.mem.Allocator) @This() {
-        return .{ .allocator = allocator, .listeners = std.ArrayList(EventListener).init(allocator) };
+        return .{ .allocator = allocator, .listeners = .empty };
     }
 
     pub fn emit(self: *@This(), event: []const u8, msg: []const u8) void {
@@ -32,11 +32,11 @@ const EventEmitter = struct {
     }
 
     pub fn on(self: *@This(), event: []const u8, cb: *const fn (message: []const u8) void) !void {
-        try self.listeners.append(.{ .name = event, .cb = cb, .once = false });
+        try self.listeners.append(self.allocator, .{ .name = event, .cb = cb, .once = false });
     }
 
     pub fn once(self: *@This(), event: []const u8, cb: *const fn (message: []const u8) void) !void {
-        try self.listeners.append(.{ .name = event, .cb = cb, .once = true });
+        try self.listeners.append(self.allocator, .{ .name = event, .cb = cb, .once = true });
     }
 
     pub fn deinit(self: *@This()) void {

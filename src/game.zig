@@ -49,7 +49,7 @@ pub const Game = struct {
 
         const grid = try Grid.init(GRID_WIDTH, GRID_HEIGHT, width, height);
 
-        var flowers = std.ArrayList(Flower).init(allocator);
+        var flowers: std.ArrayList(Flower) = .empty;
 
         for (0..grid.width) |i| {
             for (0..grid.height) |j| {
@@ -71,18 +71,18 @@ pub const Game = struct {
                     const gridI: f32 = @as(f32, @floatFromInt(i));
                     const gridJ: f32 = @as(f32, @floatFromInt(j));
                     const flower = Flower.init(flowerTexture, gridI, gridJ);
-                    try flowers.append(flower);
+                    try flowers.append(allocator, flower);
                 }
             }
         }
 
-        var bees = std.ArrayList(Bee).init(allocator);
+        var bees: std.ArrayList(Bee) = .empty;
 
         for (0..5) |_| {
             const randomPos = grid.getRandomPositionInBounds();
-            var bee = Bee.init(randomPos.x, randomPos.y, textures.bee);
+            var bee = Bee.init(randomPos.x, randomPos.y, textures.bee, allocator);
             bee.updateScale(grid.scale);
-            try bees.append(bee);
+            try bees.append(allocator, bee);
         }
 
         return .{
@@ -106,7 +106,7 @@ pub const Game = struct {
         };
     }
 
-    pub fn deinit(self: @This()) void {
+    pub fn deinit(self: *@This()) void {
         rl.closeWindow();
         rl.unloadImage(self.windowIcon);
         self.grid.deinit();
@@ -114,8 +114,8 @@ pub const Game = struct {
         self.ui.deinit();
         self.resources.deinit();
 
-        self.bees.deinit();
-        self.flowers.deinit();
+        self.bees.deinit(self.allocator);
+        self.flowers.deinit(self.allocator);
     }
 
     pub fn drawSpriteAtGridPosition(self: *@This(), texture: rl.Texture, i: f32, j: f32, sourceRect: rl.Rectangle, scale: f32, color: rl.Color) void {
@@ -180,7 +180,7 @@ pub const Game = struct {
         const flowerType = self.getRandomFlowerType();
         const flowerTexture = self.textures.getFlowerTexture(flowerType);
         const flower = Flower.init(flowerTexture, @as(f32, @floatFromInt(gridI)), @as(f32, @floatFromInt(gridJ)));
-        try self.flowers.append(flower);
+        try self.flowers.append(self.allocator, flower);
         return true;
     }
 
@@ -249,8 +249,8 @@ pub const Game = struct {
     pub fn update(self: *@This()) !void {
         const deltaTime = rl.getFrameTime();
 
-        var deadBeesIndexes = std.ArrayList(usize).init(self.allocator);
-        defer deadBeesIndexes.deinit();
+        var deadBeesIndexes: std.ArrayList(usize) = .empty;
+        defer deadBeesIndexes.deinit(self.allocator);
 
         for (self.bees.items, 0..self.bees.items.len) |*bee, index| {
             const previousPollen = bee.pollenCollected;
@@ -276,7 +276,7 @@ pub const Game = struct {
             }
 
             if (bee.dead) {
-                try deadBeesIndexes.append(index);
+                try deadBeesIndexes.append(self.allocator, index);
             }
         }
 
@@ -284,14 +284,14 @@ pub const Game = struct {
             _ = self.bees.swapRemove(deadBeeIndex);
         }
 
-        var deadFlowersIndexes = std.ArrayList(usize).init(self.allocator);
-        defer deadFlowersIndexes.deinit();
+        var deadFlowersIndexes: std.ArrayList(usize) = .empty;
+        defer deadFlowersIndexes.deinit(self.allocator);
 
         for (self.flowers.items, 0..self.flowers.items.len) |*element, index| {
             element.update(deltaTime);
 
             if (element.dead) {
-                try deadFlowersIndexes.append(index);
+                try deadFlowersIndexes.append(self.allocator, index);
             }
         }
 
@@ -333,9 +333,9 @@ pub const Game = struct {
         if (self.ui.draw(self.resources.honey, self.bees.items.len)) {
             if (self.resources.spendHoney(10.0)) {
                 const randomPos = self.grid.getRandomPositionInBounds();
-                var bee = Bee.init(randomPos.x, randomPos.y, self.textures.bee);
+                var bee = Bee.init(randomPos.x, randomPos.y, self.textures.bee, self.allocator);
                 bee.updateScale(self.grid.scale); // Set scale based on current grid scale
-                try self.bees.append(bee);
+                try self.bees.append(self.allocator, bee);
             }
         }
 
