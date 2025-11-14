@@ -51,10 +51,6 @@ pub const Bee = struct {
         };
     }
 
-    pub fn deinit(self: @This()) void {
-        rl.unloadTexture(self.texture);
-    }
-
     pub fn enableDebug(self: *@This()) void {
         self.debug = true;
     }
