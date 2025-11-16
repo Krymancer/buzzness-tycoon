@@ -107,13 +107,14 @@ pub const Game = struct {
     }
 
     pub fn deinit(self: *@This()) void {
-        rl.closeWindow();
-        rl.unloadImage(self.windowIcon);
         self.grid.deinit();
         self.textures.deinit();
         self.ui.deinit();
-        self.resources.deinit();
 
+        rl.closeWindow();
+        rl.unloadImage(self.windowIcon);
+
+        self.resources.deinit();
         self.bees.deinit(self.allocator);
         self.flowers.deinit(self.allocator);
     }
