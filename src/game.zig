@@ -37,13 +37,21 @@ pub const Game = struct {
 
     allocator: std.mem.Allocator,
 
-    pub fn init(width: f32, height: f32, allocator: std.mem.Allocator) !@This() {
+    pub fn init(allocator: std.mem.Allocator) !@This() {
         const rand = std.crypto.random;
         rl.setRandomSeed(rand.int(u32));
 
-        rl.initWindow(@intFromFloat(width), @intFromFloat(height), "Buzzness Tycoon");
+        const monitor = rl.getCurrentMonitor();
+        const screenWidth = rl.getMonitorWidth(monitor);
+        const screenHeight = rl.getMonitorHeight(monitor);
+
+        rl.initWindow(screenWidth, screenHeight, "Buzzness Tycoon");
+        rl.toggleFullscreen();
         const windowIcon = try assets.loadImageFromMemory(assets.bee_png);
         rl.setWindowIcon(windowIcon);
+
+        const width: f32 = @floatFromInt(rl.getScreenWidth());
+        const height: f32 = @floatFromInt(rl.getScreenHeight());
 
         const textures = try Textures.init();
 
