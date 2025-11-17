@@ -2,7 +2,18 @@
 
 ## Overview
 
-The game engine (`game.zig`) serves as the central orchestrator for Buzzness Tycoon, managing the main game loop, entity lifecycle, and system coordination. It follows a traditional game engine pattern with distinct initialization, update, and render phases.
+The game engine (`game.zig`) serves as the central orchestrator for Buzzness Tycoon, managing the main game loop and ECS (Entity Component System) coordination. It follows a data-oriented architecture with distinct initialization, update, and render phases.
+
+## ECS Architecture
+
+The game uses an **Entity Component System** architecture:
+
+- **Entities**: Simple u32 IDs managed by `World`
+- **Components**: Pure data structures (Position, BeeAI, FlowerGrowth, etc.)
+- **Systems**: Pure functions that operate on components
+- **World**: Central storage and query system
+
+See [ECS Refactor Plan](./ecs-refactor-plan.md) for complete architecture details.
 
 ## Architecture
 
@@ -21,9 +32,8 @@ pub const Game = struct {
     resources: Resources,
     ui: UI,
     
-    // Entities
-    bees: std.ArrayList(Bee),
-    flowers: std.ArrayList(Flower),
+    // ECS World
+    world: World,
     
     // Camera system
     cameraOffset: rl.Vector2,
@@ -45,55 +55,95 @@ pub const Game = struct {
 
 The initialization phase sets up:
 
-1. **Window Creation** - Creates a 1080x1080 window with bee icon
+1. **Window Creation** - Creates fullscreen window with dynamic resolution
 2. **Random Seed** - Initializes random number generator for gameplay variety
 3. **System Initialization** - Sets up grid, textures, resources, and UI
-4. **Entity Spawning** - Creates initial flowers and bees
+4. **ECS World Creation** - Initializes entity component storage
+5. **Entity Spawning** - Creates initial flowers (30% per cell) and bees (10 initial bees)
 
 **Initial Flower Spawning:**
-- Iterates through all grid positions
+- Iterates through all 16x16 grid positions
 - 30% chance per tile to spawn a flower
 - Randomly selects flower type (rose, dandelion, tulip)
-- Places flowers at grid coordinates
+- Creates entity with: GridPosition, Sprite, FlowerGrowth, Lifespan components
+- Flowers start at growth state 0, mature to state 4
 
 **Initial Bee Spawning:**
-- Spawns 5 bees at random positions within grid bounds
-- Each bee is initialized with proper scale based on grid zoom
+- Spawns 10 bees at random positions within grid bounds
+- Creates entity with: Position, Sprite, BeeAI, Lifespan, PollenCollector, ScaleSync components
+- Bees have 60-140 second initial lifespan
+- Bee AI initialized with random wander angle
 
 ### Update Phase (`update`)
 
-The update phase processes game logic in this order:
+The update phase runs ECS systems in this order:
 
-1. **Bee Processing**
-   - Updates each bee's AI and movement
-   - Tracks honey production from pollen collection
-   - Handles flower spawning when bees carry pollen
-   - Removes dead bees from the colony
+1. **Lifespan System**
+   - Ages all entities (bees and flowers)
+   - Checks for death conditions
+   - Extends bee life if carrying pollen (+50% lifespan)
+   - Queues dead entities for destruction
 
-2. **Flower Processing**
-   - Updates flower growth and pollen production
-   - Removes dead flowers from the grid
+2. **Flower Growth System**
+   - Progresses flower growth states (0 → 4)
+   - Regenerates pollen for mature flowers (state 4)
+   - Manages pollen cooldown timers
 
-3. **Entity Cleanup**
-   - Removes dead entities to prevent memory leaks
-   - Uses reverse iteration to maintain array integrity
+3. **Bee AI System**
+   - Handles pollination (10% chance to spawn flower when flying over empty cells)
+   - Manages scatter behavior (2-4 seconds after collecting pollen)
+   - Processes pollen deposit timer (3 seconds to convert to honey)
+   - Finds nearest flower with density limiting (max 2 bees per flower)
+   - Random walk when no targets available
+   - Bee movement toward targets
 
-**Flower Spawning Logic:**
-- Bees carrying pollen have a 10% chance per second to spawn flowers
-- Spawning converts bee world position to grid coordinates
-- Checks for existing flowers at the target position
-- Revives dead flowers or creates new ones
+4. **Flower Spawning System**
+   - Every 5 seconds, checks random empty cells
+   - 30% chance to spawn flower in empty cells
+   - Ensures sustainable flower population
+
+5. **Scale Sync System**
+   - Synchronizes entity scales with grid zoom level
+
+6. **Honey Conversion**
+   - Checks all bees for completed pollen deposits
+   - Converts pollen to honey when `!carryingPollen && pollenCollected > 0`
+   - Resets pollen counter after conversion
+
+7. **Entity Cleanup**
+   - Processes destroy queue to remove dead entities
 
 ### Render Phase (`draw`)
 
-The render phase draws the game world in layers:
+The render phase uses the render system:
 
-1. **Background** - Clears screen with dark theme color
+1. **Background** - Clears screen with dark theme color (Catppuccin Mocha base)
 2. **Grid** - Renders isometric grid tiles
-3. **Flowers** - Draws flowers with growth states and pollen glow
-4. **Bees** - Renders bees with movement and pollen indicators
-5. **UI** - Displays resource counters and purchase buttons
-6. **Debug Info** - Shows FPS counter
+3. **Render System** - Draws all entities with sprites:
+   - Flowers at grid positions with growth-based colors
+   - Bees at world positions with yellow tint when carrying pollen
+4. **UI** - Displays honey counter, bee count, and purchase button
+5. **Debug Info** - Shows FPS counter
+
+## ECS Systems
+
+### System Execution Order
+
+```zig
+try lifespan_system.update(&self.world, deltaTime);
+try flower_growth_system.update(&self.world, deltaTime);
+try bee_ai_system.update(&self.world, deltaTime, self.grid.offset, self.grid.scale, GRID_WIDTH, GRID_HEIGHT, self.textures);
+try flower_spawning_system.update(&self.world, deltaTime, self.grid.offset, self.grid.scale, GRID_WIDTH, GRID_HEIGHT, self.textures);
+try scale_sync_system.update(&self.world, self.grid.scale);
+```
+
+### Component Queries
+
+The World provides query methods:
+- `queryEntitiesWithLifespan()` - All mortal entities
+- `queryEntitiesWithFlowerGrowth()` - All flowers
+- `queryEntitiesWithBeeAI()` - All bees
+- `queryEntitiesWithScaleSync()` - All zoom-synced entities
 
 ## Input System
 

@@ -2,15 +2,24 @@ const rl = @import("raylib");
 const std = @import("std");
 
 const Grid = @import("grid.zig").Grid;
-const Bee = @import("bee.zig").Bee;
-const Flower = @import("flower.zig").Flower;
-const Flowers = @import("flower.zig").Flowers;
 const Textures = @import("textures.zig").Textures;
+const Flowers = @import("textures.zig").Flowers;
 const assets = @import("assets.zig");
 const utils = @import("utils.zig");
 
 const Resources = @import("resources.zig").Resources;
 const UI = @import("ui.zig").UI;
+
+const World = @import("ecs/world.zig").World;
+const Entity = @import("ecs/entity.zig").Entity;
+const components = @import("ecs/components.zig");
+
+const lifespan_system = @import("ecs/systems/lifespan_system.zig");
+const flower_growth_system = @import("ecs/systems/flower_growth_system.zig");
+const bee_ai_system = @import("ecs/systems/bee_ai_system.zig");
+const scale_sync_system = @import("ecs/systems/scale_sync_system.zig");
+const flower_spawning_system = @import("ecs/systems/flower_spawning_system.zig");
+const render_system = @import("ecs/systems/render_system.zig");
 
 pub const Game = struct {
     const GRID_WIDTH = 16;
@@ -25,8 +34,7 @@ pub const Game = struct {
     textures: Textures,
     grid: Grid,
 
-    bees: std.ArrayList(Bee),
-    flowers: std.ArrayList(Flower),
+    world: World,
 
     resources: Resources,
     ui: UI,
@@ -54,10 +62,9 @@ pub const Game = struct {
         const height: f32 = @floatFromInt(rl.getScreenHeight());
 
         const textures = try Textures.init();
-
         const grid = try Grid.init(GRID_WIDTH, GRID_HEIGHT, width, height);
 
-        var flowers: std.ArrayList(Flower) = .empty;
+        var world = World.init(allocator);
 
         for (0..grid.width) |i| {
             for (0..grid.height) |j| {
@@ -78,19 +85,30 @@ pub const Game = struct {
                     const flowerTexture = textures.getFlowerTexture(flowerType);
                     const gridI: f32 = @as(f32, @floatFromInt(i));
                     const gridJ: f32 = @as(f32, @floatFromInt(j));
-                    const flower = Flower.init(flowerTexture, gridI, gridJ);
-                    try flowers.append(allocator, flower);
+
+                    const flowerEntity = try world.createEntity();
+                    try world.addGridPosition(flowerEntity, components.GridPosition.init(gridI, gridJ));
+                    try world.addSprite(flowerEntity, components.Sprite.init(flowerTexture, 32, 32, 2));
+                    try world.addFlowerGrowth(flowerEntity, components.FlowerGrowth.init());
+                    try world.addLifespan(flowerEntity, components.Lifespan.init(@floatFromInt(rl.getRandomValue(60, 120))));
                 }
             }
         }
 
-        var bees: std.ArrayList(Bee) = .empty;
-
-        for (0..5) |_| {
+        for (0..10) |_| {
             const randomPos = grid.getRandomPositionInBounds();
-            var bee = Bee.init(randomPos.x, randomPos.y, textures.bee, allocator);
-            bee.updateScale(grid.scale);
-            try bees.append(allocator, bee);
+
+            const beeEntity = try world.createEntity();
+            try world.addPosition(beeEntity, components.Position.init(randomPos.x, randomPos.y));
+            try world.addSprite(beeEntity, components.Sprite.init(textures.bee, 32, 32, 1));
+            try world.addBeeAI(beeEntity, components.BeeAI.init());
+            try world.addLifespan(beeEntity, components.Lifespan.init(@floatFromInt(rl.getRandomValue(60, 140))));
+            try world.addPollenCollector(beeEntity, components.PollenCollector.init());
+            try world.addScaleSync(beeEntity, components.ScaleSync.init(1));
+
+            if (world.getScaleSync(beeEntity)) |scaleSync| {
+                scaleSync.updateFromGrid(1, grid.scale);
+            }
         }
 
         return .{
@@ -99,8 +117,7 @@ pub const Game = struct {
 
             .textures = textures,
             .grid = grid,
-            .bees = bees,
-            .flowers = flowers,
+            .world = world,
 
             .resources = Resources.init(),
             .ui = UI.init(),
@@ -118,90 +135,12 @@ pub const Game = struct {
         self.grid.deinit();
         self.textures.deinit();
         self.ui.deinit();
+        self.world.deinit();
 
         rl.closeWindow();
         rl.unloadImage(self.windowIcon);
 
         self.resources.deinit();
-        self.bees.deinit(self.allocator);
-        self.flowers.deinit(self.allocator);
-    }
-
-    pub fn drawSpriteAtGridPosition(self: *@This(), texture: rl.Texture, i: f32, j: f32, sourceRect: rl.Rectangle, scale: f32, color: rl.Color) void {
-        const tilePosition = utils.isoToXY(i, j, 32, 32, self.grid.offset.x, self.grid.offset.y, self.grid.scale);
-        const effectiveScale = scale * (self.grid.scale / 3.0);
-
-        // Calculate the center of the tile's top surface
-        const tileWidth = 32 * self.grid.scale;
-        const tileHeight = 32 * self.grid.scale;
-
-        // Center horizontally on the tile
-        const centeredX = tilePosition.x + (tileWidth - sourceRect.width * effectiveScale) / 2.0;
-
-        // Position on the top surface of the isometric cube (top 1/4 of the tile)
-        const centeredY = tilePosition.y + (tileHeight * 0.25) - (sourceRect.height * effectiveScale);
-
-        const destination = rl.Rectangle.init(centeredX, centeredY, sourceRect.width * effectiveScale, sourceRect.height * effectiveScale);
-
-        rl.drawTexturePro(texture, sourceRect, destination, rl.Vector2.init(0, 0), 0, color);
-    }
-
-    pub fn drawSpriteAtWorldPosition(self: *@This(), texture: rl.Texture, worldPos: rl.Vector2, sourceRect: rl.Rectangle, scale: f32, color: rl.Color) void {
-        const effectiveScale = scale * (self.grid.scale / 3.0);
-
-        const destination = rl.Rectangle.init(worldPos.x, worldPos.y, sourceRect.width * effectiveScale, sourceRect.height * effectiveScale);
-
-        rl.drawTexturePro(texture, sourceRect, destination, rl.Vector2.init(0, 0), 0, color);
-    }
-
-    pub fn trySpawnFlower(self: *@This(), beePosition: rl.Vector2) !bool {
-        // Convert bee world position to grid coordinates
-        const gridPos = utils.worldToGrid(beePosition, self.grid.offset, self.grid.scale);
-        const gridI = @as(usize, @intFromFloat(@max(0, @min(@as(f32, @floatFromInt(self.grid.width - 1)), gridPos.x))));
-        const gridJ = @as(usize, @intFromFloat(@max(0, @min(@as(f32, @floatFromInt(self.grid.height - 1)), gridPos.y))));
-
-        // Check if there's already a live flower at this position
-        for (self.flowers.items) |*flower| {
-            if (!flower.dead and
-                @as(usize, @intFromFloat(flower.gridPosition.x)) == gridI and
-                @as(usize, @intFromFloat(flower.gridPosition.y)) == gridJ)
-            {
-                return false; // Already has a live flower
-            }
-        }
-
-        // Look for a dead flower at this position to revive
-        for (self.flowers.items) |*flower| {
-            if (flower.dead and
-                @as(usize, @intFromFloat(flower.gridPosition.x)) == gridI and
-                @as(usize, @intFromFloat(flower.gridPosition.y)) == gridJ)
-            {
-
-                // Revive the flower with a random type
-                const flowerType = self.getRandomFlowerType();
-                flower.texture = self.textures.getFlowerTexture(flowerType);
-                flower.* = Flower.init(flower.texture, @as(f32, @floatFromInt(gridI)), @as(f32, @floatFromInt(gridJ)));
-                return true;
-            }
-        }
-
-        // If no dead flower found, spawn a new one
-        const flowerType = self.getRandomFlowerType();
-        const flowerTexture = self.textures.getFlowerTexture(flowerType);
-        const flower = Flower.init(flowerTexture, @as(f32, @floatFromInt(gridI)), @as(f32, @floatFromInt(gridJ)));
-        try self.flowers.append(self.allocator, flower);
-        return true;
-    }
-
-    fn getRandomFlowerType(self: *@This()) Flowers {
-        _ = self;
-        const x = rl.getRandomValue(1, 3);
-        return switch (x) {
-            1 => Flowers.rose,
-            2 => Flowers.dandelion,
-            3 => Flowers.tulip,
-            else => Flowers.rose,
-        };
     }
 
     pub fn run(self: *@This()) !void {
@@ -217,7 +156,6 @@ pub const Game = struct {
             rl.toggleFullscreen();
         }
 
-        // Handle mouse dragging for camera movement
         const mousePos = rl.getMousePosition();
 
         if (rl.isMouseButtonPressed(rl.MouseButton.left)) {
@@ -235,7 +173,6 @@ pub const Game = struct {
             self.cameraOffset.x += mouseDelta.x;
             self.cameraOffset.y += mouseDelta.y;
 
-            // Update grid offset
             self.grid.offset.x += mouseDelta.x;
             self.grid.offset.y += mouseDelta.y;
 
@@ -247,69 +184,33 @@ pub const Game = struct {
             const zoomSpeed = 0.3;
             const zoomDelta = wheelMove * zoomSpeed;
             self.grid.zoom(zoomDelta);
-
-            // Update bee scales
-            for (self.bees.items) |*bee| {
-                bee.updateScale(self.grid.scale);
-            }
         }
     }
 
     pub fn update(self: *@This()) !void {
         const deltaTime = rl.getFrameTime();
 
-        var deadBeesIndexes: std.ArrayList(usize) = .empty;
-        defer deadBeesIndexes.deinit(self.allocator);
+        try lifespan_system.update(&self.world, deltaTime);
+        try flower_growth_system.update(&self.world, deltaTime);
+        try bee_ai_system.update(&self.world, deltaTime, self.grid.offset, self.grid.scale, GRID_WIDTH, GRID_HEIGHT, self.textures);
+        try flower_spawning_system.update(&self.world, deltaTime, self.grid.offset, self.grid.scale, GRID_WIDTH, GRID_HEIGHT, self.textures);
+        try scale_sync_system.update(&self.world, self.grid.scale);
 
-        for (self.bees.items, 0..self.bees.items.len) |*bee, index| {
-            const previousPollen = bee.pollenCollected;
-
-            bee.update(deltaTime, self.flowers.items, self.grid.offset, self.grid.scale);
-
-            if (bee.pollenCollected > previousPollen) {
-                const newHoneyAmount = bee.pollenCollected - previousPollen;
-                self.resources.addHoney(newHoneyAmount);
-            }
-
-            if (bee.carryingPollen) {
-                const spawnChancePerSecond = 0.1;
-                const spawnChanceThisFrame = spawnChancePerSecond * deltaTime;
-                const randomValue = @as(f32, @floatFromInt(rl.getRandomValue(0, 1000))) / 1000.0;
-
-                if (randomValue < spawnChanceThisFrame) {
-                    const spawned = try self.trySpawnFlower(bee.position);
-                    if (spawned) {
-                        bee.carryingPollen = false;
+        var beeIter = try self.world.queryEntitiesWithBeeAI();
+        while (beeIter.next()) |entity| {
+            if (self.world.getPollenCollector(entity)) |collector| {
+                if (self.world.getBeeAI(entity)) |beeAI| {
+                    // Convert pollen to honey when bee has deposited (not carrying anymore)
+                    if (!beeAI.carryingPollen and collector.pollenCollected > 0) {
+                        const newHoney = collector.pollenCollected;
+                        self.resources.addHoney(newHoney);
+                        collector.pollenCollected = 0;
                     }
                 }
             }
-
-            if (bee.dead) {
-                try deadBeesIndexes.append(self.allocator, index);
-            }
         }
 
-        for (deadBeesIndexes.items) |deadBeeIndex| {
-            _ = self.bees.swapRemove(deadBeeIndex);
-        }
-
-        var deadFlowersIndexes: std.ArrayList(usize) = .empty;
-        defer deadFlowersIndexes.deinit(self.allocator);
-
-        for (self.flowers.items, 0..self.flowers.items.len) |*element, index| {
-            element.update(deltaTime);
-
-            if (element.dead) {
-                try deadFlowersIndexes.append(self.allocator, index);
-            }
-        }
-
-        // Remove dead flowers in reverse order to maintain correct indices
-        var i: usize = deadFlowersIndexes.items.len;
-        while (i > 0) {
-            i -= 1;
-            _ = self.flowers.swapRemove(deadFlowersIndexes.items[i]);
-        }
+        try self.world.processDestroyQueue();
     }
 
     pub fn draw(self: *@This()) !void {
@@ -320,31 +221,29 @@ pub const Game = struct {
 
         self.grid.draw();
 
-        // Draw flowers using centralized rendering
-        for (self.flowers.items) |*flower| {
-            if (flower.dead) continue;
+        try render_system.draw(&self.world, self.grid.offset, self.grid.scale);
 
-            const source = rl.Rectangle.init(flower.state * flower.width, 0, flower.width, flower.height);
-
-            if (flower.state == 4 and flower.hasPolen) {
-                // Draw glow effect
-                self.drawSpriteAtGridPosition(flower.texture, flower.gridPosition.x, flower.gridPosition.y, source, flower.scale + 0.1, rl.Color.init(255, 255, 100, 128));
-            }
-
-            // Draw main flower
-            self.drawSpriteAtGridPosition(flower.texture, flower.gridPosition.x, flower.gridPosition.y, source, flower.scale, rl.Color.white);
+        var beeCount: usize = 0;
+        var beeIter = try self.world.queryEntitiesWithBeeAI();
+        while (beeIter.next()) |_| {
+            beeCount += 1;
         }
 
-        for (self.bees.items) |*bee| {
-            bee.draw();
-        }
-
-        if (self.ui.draw(self.resources.honey, self.bees.items.len)) {
+        if (self.ui.draw(self.resources.honey, beeCount)) {
             if (self.resources.spendHoney(10.0)) {
                 const randomPos = self.grid.getRandomPositionInBounds();
-                var bee = Bee.init(randomPos.x, randomPos.y, self.textures.bee, self.allocator);
-                bee.updateScale(self.grid.scale); // Set scale based on current grid scale
-                try self.bees.append(self.allocator, bee);
+
+                const beeEntity = try self.world.createEntity();
+                try self.world.addPosition(beeEntity, components.Position.init(randomPos.x, randomPos.y));
+                try self.world.addSprite(beeEntity, components.Sprite.init(self.textures.bee, 32, 32, 1));
+                try self.world.addBeeAI(beeEntity, components.BeeAI.init());
+                try self.world.addLifespan(beeEntity, components.Lifespan.init(@floatFromInt(rl.getRandomValue(60, 140))));
+                try self.world.addPollenCollector(beeEntity, components.PollenCollector.init());
+                try self.world.addScaleSync(beeEntity, components.ScaleSync.init(1));
+
+                if (self.world.getScaleSync(beeEntity)) |scaleSync| {
+                    scaleSync.updateFromGrid(1, self.grid.scale);
+                }
             }
         }
 

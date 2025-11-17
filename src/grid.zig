@@ -50,10 +50,6 @@ pub const Grid = struct {
         };
     }
 
-    pub fn enableDebug(self: *@This()) void {
-        self.debug = true;
-    }
-
     pub fn zoom(self: *@This(), zoomDelta: f32) void {
         const newScale = self.scale + zoomDelta;
         self.scale = @max(self.minScale, @min(self.maxScale, newScale));

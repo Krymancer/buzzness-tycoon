@@ -2,7 +2,8 @@ const rl = @import("raylib");
 const std = @import("std");
 
 const assets = @import("assets.zig");
-const Flowers = @import("flower.zig").Flowers;
+
+pub const Flowers = enum { rose, tulip, dandelion };
 
 pub const Textures = struct {
     bee: rl.Texture,

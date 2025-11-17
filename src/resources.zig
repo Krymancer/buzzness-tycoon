@@ -9,12 +9,10 @@ const std = @import("std");
 
 pub const Resources = struct {
     honey: f32,
-    bees: f32,
 
     pub fn init() @This() {
         return .{
             .honey = 25.0,
-            .bees = 0.0,
         };
     }
 
@@ -32,9 +30,5 @@ pub const Resources = struct {
             return true;
         }
         return false;
-    }
-
-    pub fn canAfford(self: @This(), amount: f32) bool {
-        return self.honey >= amount;
     }
 };

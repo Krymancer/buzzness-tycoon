@@ -1,10 +1,23 @@
 # Bee System
 
-## Overview
+> **⚠️ LEGACY DOCUMENTATION**  
+> This document describes the old OOP-based bee implementation that has been replaced by the ECS architecture.  
+> For current implementation, see:
+> - [ECS Refactor Plan](./ecs-refactor-plan.md) - Current ECS architecture
+> - [Game Engine](./game-engine.md) - ECS system execution order
+> - Components: `BeeAI`, `Position`, `PollenCollector`, `Lifespan` in `src/ecs/components.zig`
+> - System: `bee_ai_system.zig` for current bee behavior
 
-The Bee system (`bee.zig`) implements autonomous bee agents that collect pollen from flowers and convert it to honey. Each bee has its own AI state machine, lifecycle, and visual representation. The system is designed to create emergent behavior through simple rules.
+## Overview (Legacy OOP Implementation)
 
-## Bee Structure
+The Bee system (`bee.zig` - REMOVED) implemented autonomous bee agents that collect pollen from flowers and convert it to honey. Each bee had its own AI state machine, lifecycle, and visual representation.
+
+**Current ECS Implementation:**
+- Bees are entities with `BeeAI`, `Position`, `PollenCollector`, `Lifespan`, `Sprite`, and `ScaleSync` components
+- Behavior handled by `bee_ai_system.zig`
+- Key features: scatter behavior, density limiting, pollination, life extension
+
+## Bee Structure (Legacy)
 
 ### Core Properties
 
