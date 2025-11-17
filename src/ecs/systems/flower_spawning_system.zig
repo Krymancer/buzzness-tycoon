@@ -136,7 +136,7 @@ fn trySpawnFlowerInEmptyCell(world: *World, gridWidth: usize, gridHeight: usize,
     while (attempts < 5) : (attempts += 1) {
         const gridI: usize = @intCast(rl.getRandomValue(0, @intCast(gridWidth - 1)));
         const gridJ: usize = @intCast(rl.getRandomValue(0, @intCast(gridHeight - 1)));
-        
+
         // Check if this cell already has a flower
         var hasFlower = false;
         var iter = try world.queryEntitiesWithFlowerGrowth();
@@ -153,13 +153,13 @@ fn trySpawnFlowerInEmptyCell(world: *World, gridWidth: usize, gridHeight: usize,
                 }
             }
         }
-        
+
         // If empty, 30% chance to spawn a flower
         if (!hasFlower) {
             if (rl.getRandomValue(1, 100) <= 30) {
                 const flowerType = getRandomFlowerType();
                 const flowerTexture = textures.getFlowerTexture(flowerType);
-                
+
                 const flowerEntity = try world.createEntity();
                 try world.addGridPosition(flowerEntity, components.GridPosition.init(@as(f32, @floatFromInt(gridI)), @as(f32, @floatFromInt(gridJ))));
                 try world.addSprite(flowerEntity, components.Sprite.init(flowerTexture, 32, 32, 2));
@@ -170,4 +170,3 @@ fn trySpawnFlowerInEmptyCell(world: *World, gridWidth: usize, gridHeight: usize,
         }
     }
 }
-

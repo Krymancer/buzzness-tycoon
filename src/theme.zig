@@ -47,4 +47,3 @@ pub fn applyCatppuccinMochaTheme() void {
     rg.setStyle(rg.Control.default, .{ .control = rg.ControlProperty.border_color_normal }, @bitCast(@as(i32, @bitCast(CatppuccinMocha.surface1))));
     rg.setStyle(rg.Control.default, .{ .control = rg.ControlProperty.text_color_normal }, @bitCast(@as(i32, @bitCast(CatppuccinMocha.text))));
 }
-

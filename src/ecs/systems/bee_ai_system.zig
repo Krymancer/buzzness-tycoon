@@ -32,7 +32,7 @@ pub fn update(world: *World, deltaTime: f32, gridOffset: rl.Vector2, gridScale: 
                 // Handle pollen deposit timer
                 if (beeAI.carryingPollen) {
                     beeAI.depositTimer += deltaTime;
-                    
+
                     // After 3 seconds, deposit the pollen as honey
                     if (beeAI.depositTimer >= 3.0) {
                         if (world.getPollenCollector(entity)) |collector| {
@@ -68,7 +68,7 @@ pub fn update(world: *World, deltaTime: f32, gridOffset: rl.Vector2, gridScale: 
                                         if (world.getPollenCollector(entity)) |collector| {
                                             collector.collect(1.0);
                                         }
-                                        
+
                                         // Make bee scatter away from flower for 2-4 seconds
                                         beeAI.scatterTimer = @as(f32, @floatFromInt(rl.getRandomValue(20, 40))) / 10.0;
                                     }
@@ -121,7 +121,7 @@ fn findNearestFlower(world: *World, currentBee: Entity, beePosition: rl.Vector2,
                     if (beesNearFlower >= 2) {
                         continue; // Skip overcrowded flowers
                     }
-                    
+
                     const flowerWorldPos = getFlowerWorldPosition(gridPos.toVector2(), gridOffset, gridScale);
                     const distance = rl.math.vector2DistanceSqr(flowerWorldPos, beePosition);
 
@@ -154,7 +154,7 @@ fn findNearestFlower(world: *World, currentBee: Entity, beePosition: rl.Vector2,
                         if (beesNearFlower >= 2) {
                             continue;
                         }
-                        
+
                         const flowerWorldPos = getFlowerWorldPosition(gridPos.toVector2(), gridOffset, gridScale);
                         const distance = rl.math.vector2DistanceSqr(flowerWorldPos, beePosition);
                         if (distance <= distanceThreshold) {
@@ -221,7 +221,7 @@ fn performRandomWalk(beeAI: anytype, position: anytype, deltaTime: f32) void {
     const wanderChangeInterval: f32 = 1.0;
 
     beeAI.wanderChangeTimer += deltaTime;
-    
+
     if (beeAI.wanderChangeTimer >= wanderChangeInterval) {
         const angleChange = @as(f32, @floatFromInt(rl.getRandomValue(-30, 30))) * std.math.pi / 180.0;
         beeAI.wanderAngle += angleChange;
@@ -237,30 +237,30 @@ fn performRandomWalk(beeAI: anytype, position: anytype, deltaTime: f32) void {
 
 fn handlePollination(world: *World, _: Entity, beeAI: anytype, position: anytype, gridOffset: rl.Vector2, gridScale: f32, gridWidth: usize, gridHeight: usize, textures: Textures) !void {
     const utils = @import("../../utils.zig");
-    
+
     // Convert bee's world position to grid coordinates
     const gridPos = utils.worldToGrid(position.toVector2(), gridOffset, gridScale);
     const gridX: i32 = @intFromFloat(@floor(gridPos.x));
     const gridY: i32 = @intFromFloat(@floor(gridPos.y));
-    
+
     // Check if we've moved to a new grid cell
     if (gridX == beeAI.lastGridX and gridY == beeAI.lastGridY) {
         return; // Still in same cell, don't check again
     }
-    
+
     // Update last grid position
     beeAI.lastGridX = gridX;
     beeAI.lastGridY = gridY;
-    
+
     // Check if position is within grid bounds
     if (gridX < 0 or gridY < 0 or gridX >= @as(i32, @intCast(gridWidth)) or gridY >= @as(i32, @intCast(gridHeight))) {
         return;
     }
-    
+
     // Check if there's already a flower at this position
     const gridXf: f32 = @floatFromInt(gridX);
     const gridYf: f32 = @floatFromInt(gridY);
-    
+
     var hasFlower = false;
     var flowerIter = try world.queryEntitiesWithFlowerGrowth();
     while (flowerIter.next()) |flowerEntity| {
@@ -271,7 +271,7 @@ fn handlePollination(world: *World, _: Entity, beeAI: anytype, position: anytype
             }
         }
     }
-    
+
     // If no flower exists, 10% chance to spawn one
     if (!hasFlower) {
         const spawnChance = rl.getRandomValue(1, 100);
@@ -284,9 +284,9 @@ fn handlePollination(world: *World, _: Entity, beeAI: anytype, position: anytype
                 3 => Flowers.tulip,
                 else => Flowers.rose,
             };
-            
+
             const flowerTexture = textures.getFlowerTexture(flowerType);
-            
+
             const flowerEntity = try world.createEntity();
             try world.addGridPosition(flowerEntity, components.GridPosition.init(gridXf, gridYf));
             try world.addSprite(flowerEntity, components.Sprite.init(flowerTexture, 32, 32, 2));
@@ -300,12 +300,12 @@ fn countBeesNearFlower(world: *World, currentBee: Entity, flowerEntity: Entity, 
     const flowerGridPos = world.getGridPosition(flowerEntity) orelse return 0;
     const flowerWorldPos = getFlowerWorldPosition(flowerGridPos.toVector2(), gridOffset, gridScale);
     const checkRadius: f32 = 100.0; // pixels
-    
+
     var count: u32 = 0;
     var beeIter = try world.queryEntitiesWithBeeAI();
     while (beeIter.next()) |beeEntity| {
         if (beeEntity == currentBee) continue; // Don't count self
-        
+
         if (world.getBeeAI(beeEntity)) |otherBeeAI| {
             // Count bees that are targeting this flower or are nearby
             if (otherBeeAI.targetEntity) |targetEntity| {
@@ -314,7 +314,7 @@ fn countBeesNearFlower(world: *World, currentBee: Entity, flowerEntity: Entity, 
                     continue;
                 }
             }
-            
+
             // Also count bees physically near the flower
             if (world.getPosition(beeEntity)) |otherPos| {
                 const distance = rl.math.vector2Distance(otherPos.toVector2(), flowerWorldPos);
@@ -324,7 +324,6 @@ fn countBeesNearFlower(world: *World, currentBee: Entity, flowerEntity: Entity, 
             }
         }
     }
-    
+
     return count;
 }
-

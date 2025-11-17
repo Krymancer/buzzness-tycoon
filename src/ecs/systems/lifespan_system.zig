@@ -16,7 +16,7 @@ pub fn update(world: *World, deltaTime: f32) !void {
                         lifespan.timeSpan += extension;
                         lifespan.timeAlive = 0; // Reset time alive
                         beeAI.carryingPollen = false; // Consume the pollen
-                        
+
                         // Also reset the pollen collected
                         if (world.getPollenCollector(entity)) |collector| {
                             collector.pollenCollected = 0;
@@ -24,7 +24,7 @@ pub fn update(world: *World, deltaTime: f32) !void {
                         continue; // Don't destroy this entity
                     }
                 }
-                
+
                 try world.destroyEntity(entity);
             }
         }

@@ -97,7 +97,7 @@ pub const Game = struct {
 
         for (0..10) |_| {
             const randomPos = grid.getRandomPositionInBounds();
-            
+
             const beeEntity = try world.createEntity();
             try world.addPosition(beeEntity, components.Position.init(randomPos.x, randomPos.y));
             try world.addSprite(beeEntity, components.Sprite.init(textures.bee, 32, 32, 1));
@@ -105,7 +105,7 @@ pub const Game = struct {
             try world.addLifespan(beeEntity, components.Lifespan.init(@floatFromInt(rl.getRandomValue(60, 140))));
             try world.addPollenCollector(beeEntity, components.PollenCollector.init());
             try world.addScaleSync(beeEntity, components.ScaleSync.init(1));
-            
+
             if (world.getScaleSync(beeEntity)) |scaleSync| {
                 scaleSync.updateFromGrid(1, grid.scale);
             }
@@ -232,7 +232,7 @@ pub const Game = struct {
         if (self.ui.draw(self.resources.honey, beeCount)) {
             if (self.resources.spendHoney(10.0)) {
                 const randomPos = self.grid.getRandomPositionInBounds();
-                
+
                 const beeEntity = try self.world.createEntity();
                 try self.world.addPosition(beeEntity, components.Position.init(randomPos.x, randomPos.y));
                 try self.world.addSprite(beeEntity, components.Sprite.init(self.textures.bee, 32, 32, 1));
@@ -240,7 +240,7 @@ pub const Game = struct {
                 try self.world.addLifespan(beeEntity, components.Lifespan.init(@floatFromInt(rl.getRandomValue(60, 140))));
                 try self.world.addPollenCollector(beeEntity, components.PollenCollector.init());
                 try self.world.addScaleSync(beeEntity, components.ScaleSync.init(1));
-                
+
                 if (self.world.getScaleSync(beeEntity)) |scaleSync| {
                     scaleSync.updateFromGrid(1, self.grid.scale);
                 }
