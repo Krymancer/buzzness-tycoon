@@ -11,37 +11,43 @@ The Resource system (`resources.zig`) manages the game's economy through honey p
 ```zig
 pub const Resources = struct {
     honey: f32,    // Primary resource - accumulated from bee pollen collection
-    bees: f32,     // Currently unused - placeholder for future bee counting
 }
 ```
 
 ### Resource Types
 
 **Honey (Primary Resource):**
-- Produced by bees collecting pollen
-- Used to purchase new bees
+- Produced by bees collecting pollen (1 honey per pollen)
+- Used to purchase new bees (10 honey per bee)
 - Acts as the game's primary currency
 - Displayed prominently in UI
+- No upper limit on honey storage
 
-**Bees (Placeholder):**
-- Currently unused in gameplay
-- Reserved for future bee-related mechanics
-- Could track bee population statistics
+**Bee Count:**
+- Tracked by ECS World through entity queries
+- Counted dynamically when needed for UI display
+- No longer stored as a resource field
 
 ## Economic System
 
 ### Honey Production
 
 **Production Chain:**
-1. Bees collect pollen from mature flowers
-2. Each pollen unit converts to 1 honey unit
-3. Honey accumulates in the resource pool
-4. No upper limit on honey storage
+1. Bees collect pollen from mature flowers (state 4)
+2. Bees carry pollen for 3 seconds (deposit timer)
+3. After deposit, pollen converts to honey (1:1 ratio)
+4. Honey accumulates in the resource pool
 
 **Production Tracking:**
-- Main game loop monitors bee pollen collection
-- Honey increases when bees successfully collect pollen
-- Immediate conversion from pollen to honey
+- Main game loop monitors bee pollen collectors
+- Conversion happens when `!carryingPollen && pollenCollected > 0`
+- Immediate honey increase after pollen deposit
+- Pollen counter resets after conversion
+
+**Life Extension Mechanic:**
+- Bees carrying pollen when lifespan ends get +50% lifespan extension
+- Pollen is consumed in the process (no honey generated)
+- Provides strategic value to keeping bees productive
 
 ### Honey Consumption
 
@@ -50,28 +56,31 @@ pub const Resources = struct {
 - Only spending mechanism in current game
 
 **Spending Validation:**
-- `canAfford()` checks resource availability
 - `spendHoney()` validates and deducts resources
+- Returns boolean success/failure status
 - Transaction-safe resource management
 
 ### Resource Initialization
 
 **Starting Resources:**
-- Players begin with 2,500 honey
-- Provides buffer for initial bee purchases
-- Allows for strategic early game decisions
+- Players begin with 25 honey
+- Start with 10 bees
+- Requires careful early-game resource management
+- Forces strategic decisions about bee purchases
 
 ## API Design
 
 ### Resource Management Functions
 
 ```zig
-pub fn init() Resources
+pub fn init() Resources           // Initialize with 25 honey
 pub fn deinit(self: Resources) void
 pub fn addHoney(self: *Resources, amount: f32) void
 pub fn spendHoney(self: *Resources, amount: f32) bool
-pub fn canAfford(self: Resources, amount: f32) bool
 ```
+
+**Removed Functions:**
+- `canAfford()` - Now handled inline with direct comparison
 
 ### Transaction Safety
 

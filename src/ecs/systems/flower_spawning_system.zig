@@ -1,0 +1,173 @@
+const std = @import("std");
+const rl = @import("raylib");
+const World = @import("../world.zig").World;
+const components = @import("../components.zig");
+const utils = @import("../../utils.zig");
+
+var emptyCellTimer: f32 = 0;
+const EMPTY_CELL_CHECK_INTERVAL: f32 = 5.0; // Check every 5 seconds
+
+pub fn update(
+    world: *World,
+    deltaTime: f32,
+    gridOffset: rl.Vector2,
+    gridScale: f32,
+    gridWidth: usize,
+    gridHeight: usize,
+    textures: anytype,
+) !void {
+    // Periodically spawn flowers in empty cells
+    emptyCellTimer += deltaTime;
+    if (emptyCellTimer >= EMPTY_CELL_CHECK_INTERVAL) {
+        emptyCellTimer = 0;
+        try trySpawnFlowerInEmptyCell(world, gridWidth, gridHeight, textures);
+    }
+
+    var iter = try world.queryEntitiesWithBeeAI();
+    while (iter.next()) |entity| {
+        if (world.getBeeAI(entity)) |beeAI| {
+            if (world.getPosition(entity)) |position| {
+                if (beeAI.carryingPollen) {
+                    const spawnChancePerSecond = 0.1;
+                    const spawnChanceThisFrame = spawnChancePerSecond * deltaTime;
+                    const randomValue = @as(f32, @floatFromInt(rl.getRandomValue(0, 1000))) / 1000.0;
+
+                    if (randomValue < spawnChanceThisFrame) {
+                        const spawned = try trySpawnFlower(
+                            world,
+                            position.toVector2(),
+                            gridOffset,
+                            gridScale,
+                            gridWidth,
+                            gridHeight,
+                            textures,
+                        );
+                        if (spawned) {
+                            beeAI.carryingPollen = false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn trySpawnFlower(
+    world: *World,
+    beePosition: rl.Vector2,
+    gridOffset: rl.Vector2,
+    gridScale: f32,
+    gridWidth: usize,
+    gridHeight: usize,
+    textures: anytype,
+) !bool {
+    const gridPos = utils.worldToGrid(beePosition, gridOffset, gridScale);
+    const gridI = @as(usize, @intFromFloat(@max(0, @min(@as(f32, @floatFromInt(gridWidth - 1)), gridPos.x))));
+    const gridJ = @as(usize, @intFromFloat(@max(0, @min(@as(f32, @floatFromInt(gridHeight - 1)), gridPos.y))));
+
+    var iter = try world.queryEntitiesWithFlowerGrowth();
+    while (iter.next()) |entity| {
+        if (world.getGridPosition(entity)) |existingGridPos| {
+            if (world.getLifespan(entity)) |lifespan| {
+                if (!lifespan.isDead() and
+                    @as(usize, @intFromFloat(existingGridPos.x)) == gridI and
+                    @as(usize, @intFromFloat(existingGridPos.y)) == gridJ)
+                {
+                    return false;
+                }
+            }
+        }
+    }
+
+    var iter2 = try world.queryEntitiesWithFlowerGrowth();
+    while (iter2.next()) |entity| {
+        if (world.getGridPosition(entity)) |existingGridPos| {
+            if (world.getFlowerGrowth(entity)) |growth| {
+                if (world.getLifespan(entity)) |lifespan| {
+                    if (lifespan.isDead() and
+                        @as(usize, @intFromFloat(existingGridPos.x)) == gridI and
+                        @as(usize, @intFromFloat(existingGridPos.y)) == gridJ)
+                    {
+                        const flowerType = getRandomFlowerType();
+                        const flowerTexture = textures.getFlowerTexture(flowerType);
+
+                        if (world.getSprite(entity)) |sprite| {
+                            sprite.texture = flowerTexture;
+                        }
+
+                        growth.* = components.FlowerGrowth.init();
+                        lifespan.timeAlive = 0;
+                        lifespan.totalTimeAlive = 0;
+
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    const flowerType = getRandomFlowerType();
+    const flowerTexture = textures.getFlowerTexture(flowerType);
+
+    const flowerEntity = try world.createEntity();
+    try world.addGridPosition(flowerEntity, components.GridPosition.init(@as(f32, @floatFromInt(gridI)), @as(f32, @floatFromInt(gridJ))));
+    try world.addSprite(flowerEntity, components.Sprite.init(flowerTexture, 32, 32, 2));
+    try world.addFlowerGrowth(flowerEntity, components.FlowerGrowth.init());
+    try world.addLifespan(flowerEntity, components.Lifespan.init(@floatFromInt(rl.getRandomValue(60, 120))));
+
+    return true;
+}
+
+fn getRandomFlowerType() @import("../../textures.zig").Flowers {
+    const rl_module = @import("raylib");
+    const Flowers = @import("../../textures.zig").Flowers;
+    const x = rl_module.getRandomValue(1, 3);
+    return switch (x) {
+        1 => Flowers.rose,
+        2 => Flowers.dandelion,
+        3 => Flowers.tulip,
+        else => Flowers.rose,
+    };
+}
+
+fn trySpawnFlowerInEmptyCell(world: *World, gridWidth: usize, gridHeight: usize, textures: anytype) !void {
+    // Try a few random cells to find an empty one
+    var attempts: usize = 0;
+    while (attempts < 5) : (attempts += 1) {
+        const gridI: usize = @intCast(rl.getRandomValue(0, @intCast(gridWidth - 1)));
+        const gridJ: usize = @intCast(rl.getRandomValue(0, @intCast(gridHeight - 1)));
+        
+        // Check if this cell already has a flower
+        var hasFlower = false;
+        var iter = try world.queryEntitiesWithFlowerGrowth();
+        while (iter.next()) |entity| {
+            if (world.getGridPosition(entity)) |gridPos| {
+                if (world.getLifespan(entity)) |lifespan| {
+                    if (!lifespan.isDead() and
+                        @as(usize, @intFromFloat(gridPos.x)) == gridI and
+                        @as(usize, @intFromFloat(gridPos.y)) == gridJ)
+                    {
+                        hasFlower = true;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // If empty, 30% chance to spawn a flower
+        if (!hasFlower) {
+            if (rl.getRandomValue(1, 100) <= 30) {
+                const flowerType = getRandomFlowerType();
+                const flowerTexture = textures.getFlowerTexture(flowerType);
+                
+                const flowerEntity = try world.createEntity();
+                try world.addGridPosition(flowerEntity, components.GridPosition.init(@as(f32, @floatFromInt(gridI)), @as(f32, @floatFromInt(gridJ))));
+                try world.addSprite(flowerEntity, components.Sprite.init(flowerTexture, 32, 32, 2));
+                try world.addFlowerGrowth(flowerEntity, components.FlowerGrowth.init());
+                try world.addLifespan(flowerEntity, components.Lifespan.init(@floatFromInt(rl.getRandomValue(60, 120))));
+                return; // Successfully spawned
+            }
+        }
+    }
+}
+

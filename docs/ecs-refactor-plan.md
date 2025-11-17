@@ -1,23 +1,38 @@
-# ECS Refactor Plan
+# ECS Architecture Documentation
+
+> **✅ REFACTOR COMPLETED**  
+> This document describes the completed ECS migration. The game now runs on a full Entity Component System architecture.
 
 ## Overview
 
-Migrating from traditional object-oriented architecture to Entity Component System (ECS) to support future features like boost totems, new behaviors, and better code scalability.
+Successfully migrated from traditional object-oriented architecture to Entity Component System (ECS) to support advanced features like:
+- ✅ Bee scatter behavior and density limiting
+- ✅ Pollination mechanics (bees spawn flowers)
+- ✅ Automatic flower spawning in empty cells
+- ✅ Pollen-based life extension for bees
+- ✅ Dynamic honey generation
+- Future: Boost totems, new entity types, status effects
 
-## Current Architecture (Object-Oriented)
+## Previous Architecture (Removed)
 
-- `Bee` and `Flower` are structs with data + methods
-- `Game` holds `ArrayList(Bee)` and `ArrayList(Flower)`
-- Each entity updates itself (`bee.update()`, `flower.update()`)
-- Manual iteration and index tracking for dead entities
-- Tight coupling between entities and their behavior
+- ~~`Bee` and `Flower` structs with data + methods~~ (deleted)
+- ~~`Game` holds `ArrayList(Bee)` and `ArrayList(Flower)`~~
+- ~~Each entity updates itself (`bee.update()`, `flower.update()`)~~
+- ~~Manual iteration and index tracking for dead entities~~
 
-## Target ECS Architecture
+## Current ECS Architecture
 
 ### Entities
-Just unique IDs (`u32` or `u64`) that represent game objects.
+Unique IDs (`u32`) managed by `EntityManager` with free list recycling.
+
+```zig
+// src/ecs/entity.zig
+pub const Entity = u32;
+```
 
 ### Components (Pure Data)
+
+Located in `src/ecs/components.zig`:
 
 #### Core Components
 ```zig
@@ -50,6 +65,14 @@ BeeAI {
     targetEntity: ?Entity,
     targetLocked: bool,
     carryingPollen: bool,
+    wanderAngle: f32,
+    wanderChangeTimer: f32,
+    depositTimer: f32,
+    lastGridX: i32,
+    lastGridY: i32,
+    scatterTimer: f32,
+}
+    carryingPollen: bool,
 }
 
 FlowerGrowth {
@@ -78,103 +101,109 @@ ScaleSync {
 
 ### Systems (Pure Logic)
 
-Systems operate on entities with specific component combinations:
+All systems implemented in `src/ecs/systems/`:
 
-1. **LifespanSystem** - Tracks entity age, marks entities as dead
-2. **FlowerGrowthSystem** - Updates flower growth states, handles pollen regeneration
-3. **BeeAISystem** - Finds target flowers, moves bees toward targets
-4. **PollenCollectionSystem** - Handles bee-flower interactions and pollen collection
-5. **FlowerSpawningSystem** - Spawns new flowers from bees carrying pollen
-6. **ScaleSyncSystem** - Updates entity scales based on grid zoom level
-7. **DeadEntityCleanupSystem** - Removes dead entities from the world
-8. **RenderSystem** - Draws all entities with Position + Sprite components
+1. **LifespanSystem** ✅ - Tracks entity age, marks entities as dead, handles pollen life extension
+2. **FlowerGrowthSystem** ✅ - Updates flower growth states (0→4), handles pollen regeneration
+3. **BeeAISystem** ✅ - Target finding with density limiting, movement, scatter behavior, pollination
+4. **FlowerSpawningSystem** ✅ - Spawns flowers in empty cells every 5 seconds (30% chance)
+5. **ScaleSyncSystem** ✅ - Updates entity scales based on grid zoom level
+6. **RenderSystem** ✅ - Draws all entities with Position/GridPosition + Sprite components
 
 ### World Structure
 
 ```zig
 World {
-    // Entity management
-    nextEntityId: u32,
-    entities: std.ArrayList(Entity),
+    allocator: Allocator,
+    entityManager: EntityManager,
     
-    // Component storage (Struct of Arrays for cache efficiency)
-    positions: std.MultiArrayList(Position),
-    gridPositions: std.MultiArrayList(GridPosition),
-    sprites: std.MultiArrayList(Sprite),
-    beeAIs: std.MultiArrayList(BeeAI),
-    flowerGrowths: std.MultiArrayList(FlowerGrowth),
-    lifespans: std.MultiArrayList(Lifespan),
-    pollenCollectors: std.MultiArrayList(PollenCollector),
-    scaleSync: std.MultiArrayList(ScaleSync),
+    // Component storage (ArrayLists for each component type)
+    positions: ArrayList(Position),
+    gridPositions: ArrayList(GridPosition),
+    sprites: ArrayList(Sprite),
+    velocities: ArrayList(Velocity),
+    beeAIs: ArrayList(BeeAI),
+    flowerGrowths: ArrayList(FlowerGrowth),
+    lifespans: ArrayList(Lifespan),
+    pollenCollectors: ArrayList(PollenCollector),
+    scaleSync: ArrayList(ScaleSync),
     
     // Sparse mapping: entityId -> component array index
-    entityToPosition: std.AutoHashMap(Entity, usize),
-    entityToSprite: std.AutoHashMap(Entity, usize),
-    entityToBeeAI: std.AutoHashMap(Entity, usize),
-    // ... etc for all component types
+    entityToPosition: AutoHashMap(Entity, usize),
+    entityToGridPosition: AutoHashMap(Entity, usize),
+    entityToSprite: AutoHashMap(Entity, usize),
+    entityToVelocity: AutoHashMap(Entity, usize),
+    entityToBeeAI: AutoHashMap(Entity, usize),
+    entityToFlowerGrowth: AutoHashMap(Entity, usize),
+    entityToLifespan: AutoHashMap(Entity, usize),
+    entityToPollenCollector: AutoHashMap(Entity, usize),
+    entityToScaleSync: AutoHashMap(Entity, usize),
+    
+    // Destroy queue for deferred entity removal
+    entitiesToDestroy: ArrayList(Entity),
 }
 ```
 
-## Implementation Phases
+## Implementation Status
 
-### Phase 1: Core ECS Infrastructure
-**Goal**: Build the foundation without breaking existing code
+### Phase 1: Core ECS Infrastructure ✅
+**Status**: COMPLETED
 
-- [ ] Create `src/ecs/` directory structure
-- [ ] Implement `entity.zig` - Entity ID type and management
-- [ ] Implement `components.zig` - All component struct definitions
-- [ ] Implement `world.zig` - Component storage, add/remove/get methods
-- [ ] Implement basic query system for component iteration
+- ✅ Create `src/ecs/` directory structure
+- ✅ Implement `entity.zig` - Entity ID type with free list recycling
+- ✅ Implement `components.zig` - All 9 component struct definitions
+- ✅ Implement `world.zig` - Component storage with add/remove/get methods
+- ✅ Implement query system for component iteration (6 query methods)
 
-**Files to create**:
+**Files created**:
 - `src/ecs/entity.zig`
 - `src/ecs/components.zig`
 - `src/ecs/world.zig`
 
-### Phase 2: Component Migration
-**Goal**: Define all components matching current entity data
+### Phase 2: Component Migration ✅
+**Status**: COMPLETED
 
-- [ ] Extract Position data from Bee/Flower
-- [ ] Extract Sprite/rendering data
-- [ ] Extract GridPosition for grid-based entities
-- [ ] Extract BeeAI behavior data
-- [ ] Extract FlowerGrowth behavior data
-- [ ] Extract Lifespan/death tracking data
-- [ ] Extract PollenCollector stats
+- ✅ Position data from Bee/Flower
+- ✅ GridPosition for grid-based entities
+- ✅ Sprite/rendering data
+- ✅ BeeAI behavior data (with scatter, pollination tracking)
+- ✅ FlowerGrowth behavior data
+- ✅ Lifespan/death tracking data
+- ✅ PollenCollector stats
+- ✅ ScaleSync for grid zoom
+- ✅ Velocity component
 
-**Files to modify**:
-- `src/ecs/components.zig` (add all component definitions)
+**Files modified**:
+- `src/ecs/components.zig` (all components defined)
 
-### Phase 3: System Implementation
-**Goal**: Implement systems that replace current update/draw logic
+### Phase 3: System Implementation ✅
+**Status**: COMPLETED
 
-- [ ] Create `src/ecs/systems/` directory
-- [ ] Implement `lifespan_system.zig`
-- [ ] Implement `flower_growth_system.zig`
-- [ ] Implement `bee_ai_system.zig`
-- [ ] Implement `pollen_collection_system.zig`
-- [ ] Implement `flower_spawning_system.zig`
-- [ ] Implement `scale_sync_system.zig`
-- [ ] Implement `cleanup_system.zig`
-- [ ] Implement `render_system.zig`
+- ✅ Create `src/ecs/systems/` directory
+- ✅ Implement `lifespan_system.zig` (with pollen life extension)
+- ✅ Implement `flower_growth_system.zig`
+- ✅ Implement `bee_ai_system.zig` (with scatter, density limiting, pollination)
+- ✅ Implement `flower_spawning_system.zig` (empty cell spawning)
+- ✅ Implement `scale_sync_system.zig`
+- ✅ Implement `render_system.zig`
 
-**Files to create**:
+**Files created**:
 - `src/ecs/systems/lifespan_system.zig`
 - `src/ecs/systems/flower_growth_system.zig`
 - `src/ecs/systems/bee_ai_system.zig`
-- `src/ecs/systems/pollen_collection_system.zig`
 - `src/ecs/systems/flower_spawning_system.zig`
 - `src/ecs/systems/scale_sync_system.zig`
-- `src/ecs/systems/cleanup_system.zig`
 - `src/ecs/systems/render_system.zig`
 
-### Phase 4: Game Integration
-**Goal**: Replace old code with ECS, maintain feature parity
+### Phase 4: Game Integration ✅
+**Status**: COMPLETED
 
-- [ ] Add World to `Game` struct
-- [ ] Migrate entity spawning (bees, flowers) to use World
-- [ ] Replace `update()` method with system execution
-- [ ] Replace `draw()` method with render system
+- ✅ Add World to `Game` struct
+- ✅ Migrate entity spawning (10 bees, 30% flowers per cell)
+- ✅ Replace `update()` method with system execution
+- ✅ Replace `draw()` method with render system
+- ✅ Honey conversion from pollen collection
+- ✅ Bee purchasing with ECS entity creation
 - [ ] Remove old `ArrayList(Bee)` and `ArrayList(Flower)`
 - [ ] Remove or archive old `bee.zig` and `flower.zig`
 
@@ -228,57 +257,148 @@ System queries all entities near totems and applies multipliers.
 
 ### Advanced Behaviors
 - **Flocking**: Query nearby bees, apply separation/alignment/cohesion
-- **Territories**: Mark grid cells with ownership
-- **Status Effects**: Add `StatusEffect` component for buffs/debuffs
+### Phase 5: Code Cleanup ✅
+**Status**: COMPLETED
+
+- ✅ Remove old `src/bee.zig`
+- ✅ Remove old `src/flower.zig`
+- ✅ Remove unused `src/eventEmmiter.zig`
+- ✅ Clean up unused theme functions
+- ✅ Remove unused Grid methods
+- ✅ Clean up Resources struct
+- ✅ Update documentation
+
+**Files removed**:
+- `src/bee.zig`
+- `src/flower.zig`
+- `src/eventEmmiter.zig`
+
+## New Gameplay Mechanics (ECS-Enabled)
+
+### Bee Scatter Behavior
+- After collecting pollen, bees scatter for 2-4 seconds
+- Prevents immediate re-targeting of nearest flower
+- Creates more organic movement patterns
+- Spreads bees across the map
+
+### Bee Density Limiting
+- Maximum of 2 bees can target the same flower
+- Checks both active targets and proximity (100px radius)
+- Prevents clustering around single flowers
+- Encourages even distribution
+
+### Pollination Mechanics
+- Bees carrying pollen have 10% chance to spawn flowers when flying over empty cells
+- Tracks last grid position to avoid duplicate spawns
+- Creates organic flower spreading
+- Player-influenced map expansion
+
+### Automatic Flower Spawning
+- Every 5 seconds, checks 5 random grid cells
+- 30% chance to spawn flower in empty cells
+- Ensures sustainable flower population
+- Prevents game from running out of resources
+
+### Pollen Life Extension
+- Bees carrying pollen when lifespan ends get +50% lifespan extension
+- Pollen is consumed (no honey generated)
+- Resets timeAlive counter
+- Rewards productive bees
+
+### Honey Deposit System
+- Bees carry pollen for 3 seconds before depositing
+- Deposit converts pollen to honey (1:1 ratio)
+- Visual indicator (yellow tint) when carrying pollen
+- Creates strategic timing gameplay
+
+## Benefits of ECS Architecture
+
+✅ **Performance**: Better cache locality, data-oriented design  
+✅ **Scalability**: Easy to add new component types and entities  
+✅ **Flexibility**: Mix and match components without inheritance  
+✅ **Maintainability**: Pure data and pure logic separation  
+✅ **Testability**: Systems can be tested independently  
+✅ **Future-Ready**: Foundation for complex mechanics (boost totems, status effects, etc.)
+
+## Future Expansion Ideas
+
+### Boost Totem System
+- **BoostEffect Component**: `{ type: BoostType, range: f32, multiplier: f32 }`
+- **BoostType Enum**: HoneyMultiplier, SpeedBoost, LifespanExtension, FlowerGrowth
+- **Totem Entity**: GridPosition + BoostEffect + Sprite
+- **System**: Checks bees in range, applies effects
+
+### Status Effect System
+- **StatusEffect Component**: `{ effectType: EffectType, duration: f32, strength: f32 }`
+- **EffectType Enum**: Poison, Speed, Invulnerability, DoubleHoney
+- **System**: Updates durations, applies/removes effects
+
+### Predator System
+- **Predator Component**: `{ targetEntity: ?Entity, aggression: f32 }`
+- **Entities**: Birds, wasps that chase bees
+- **System**: Find nearest bee, chase, reduce bee lifespan on contact
 
 ## Migration Strategy
 
-1. **Incremental**: Build ECS alongside existing code
-2. **Parallel Testing**: Run both systems simultaneously to verify parity
-3. **Gradual Cutover**: Switch one entity type at a time
-4. **Rollback Safety**: Keep old code until ECS is fully verified
+~~1. **Incremental**: Build ECS alongside existing code~~  
+~~2. **Parallel Testing**: Run both systems simultaneously to verify parity~~  
+~~3. **Gradual Cutover**: Switch one entity type at a time~~  
+~~4. **Rollback Safety**: Keep old code until ECS is fully verified~~
+
+**✅ Migration Complete**: Full cutover to ECS architecture successful
 
 ## System Execution Order
 
 ### Update Phase
 ```
-LifespanSystem
+LifespanSystem (checks pollen life extension)
    ↓
-FlowerGrowthSystem
+FlowerGrowthSystem (progresses growth states)
    ↓
-BeeAISystem
+BeeAISystem (pollination, scatter, targeting, movement)
    ↓
-PollenCollectionSystem
+FlowerSpawningSystem (empty cell spawning)
    ↓
-FlowerSpawningSystem
+ScaleSyncSystem (grid zoom sync)
    ↓
-ScaleSyncSystem
+Honey Conversion (pollen → honey when deposited)
    ↓
-DeadEntityCleanupSystem
+Entity Cleanup (process destroy queue)
 ```
 
 ### Render Phase
 ```
-RenderSystem (iterates all entities with Position + Sprite)
+Grid Rendering
+   ↓
+RenderSystem (draws all entities with sprites)
+   ↓
+UI Layer (honey counter, bee count, purchase button)
 ```
+
+## Performance Characteristics
+
+- **Entity Creation**: O(1) with free list recycling
+- **Component Add/Remove**: O(1) hash map operations
+- **Component Lookup**: O(1) sparse mapping
+- **System Iteration**: O(n) where n = entities with matching components
+- **Memory**: Sparse mapping overhead, but cache-friendly component arrays
 
 ## Notes & Considerations
 
-- Keep textures/resources separate from ECS (shared assets)
-- Use sparse mapping for O(1) component lookup by entity ID
-- Consider component pools for frequently added/removed components
-- May need custom query syntax for complex component combinations
-- Grid reference should be passed to systems, not stored per entity
-- Camera offset should be global state, not per entity
+✅ Textures/resources separate from ECS (shared assets)  
+✅ Sparse mapping for O(1) component lookup by entity ID  
+✅ Destroy queue for safe deferred entity removal  
+✅ Grid reference passed to systems, not stored per entity  
+✅ Camera offset as global state, not per entity  
+✅ Zig 0.15 compatibility (ArrayList.empty, allocator parameters)
 
-## Timeline Estimate
+## Timeline
 
-- Phase 1: 1-2 days
-- Phase 2: 1 day
-- Phase 3: 2-3 days
-- Phase 4: 1-2 days
-- Phase 5: 1 day
-- **Total**: ~1-2 weeks for full migration
+- Phase 1-2: Completed in 1 day (ECS core + components)
+- Phase 3: Completed in 2 days (all systems)
+- Phase 4: Completed in 1 day (game integration)
+- Phase 5: Completed in 1 day (cleanup + docs)
+- **Total**: 5 days for full migration ✅
 
 ## References
 

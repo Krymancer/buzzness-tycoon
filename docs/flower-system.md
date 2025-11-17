@@ -1,10 +1,24 @@
 # Flower System
 
-## Overview
+> **⚠️ LEGACY DOCUMENTATION**  
+> This document describes the old OOP-based flower implementation that has been replaced by the ECS architecture.  
+> For current implementation, see:
+> - [ECS Refactor Plan](./ecs-refactor-plan.md) - Current ECS architecture
+> - [Game Engine](./game-engine.md) - ECS system execution order
+> - Components: `FlowerGrowth`, `GridPosition`, `Lifespan` in `src/ecs/components.zig`
+> - Systems: `flower_growth_system.zig` and `flower_spawning_system.zig`
 
-The Flower system (`flower.zig`) manages the growth, pollen production, and lifecycle of flowers in the game world. Flowers serve as the primary resource nodes that bees interact with, creating a dynamic ecosystem that drives the game's core loop.
+## Overview (Legacy OOP Implementation)
 
-## Flower Structure
+The Flower system (`flower.zig` - REMOVED) managed the growth, pollen production, and lifecycle of flowers in the game world.
+
+**Current ECS Implementation:**
+- Flowers are entities with `FlowerGrowth`, `GridPosition`, `Lifespan`, and `Sprite` components
+- Growth handled by `flower_growth_system.zig`
+- Spawning handled by `flower_spawning_system.zig`
+- Key features: automatic spawning in empty cells, pollination by bees, pollen regeneration
+
+## Flower Structure (Legacy)
 
 ### Core Properties
 

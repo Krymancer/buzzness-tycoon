@@ -1,0 +1,90 @@
+const rl = @import("raylib");
+const World = @import("../world.zig").World;
+const utils = @import("../../utils.zig");
+
+pub fn draw(world: *World, gridOffset: rl.Vector2, gridScale: f32) !void {
+    var flowerIter = try world.queryEntitiesWithFlowerGrowth();
+    while (flowerIter.next()) |entity| {
+        if (world.getFlowerGrowth(entity)) |growth| {
+            if (world.getGridPosition(entity)) |gridPos| {
+                if (world.getSprite(entity)) |sprite| {
+                    if (world.getLifespan(entity)) |lifespan| {
+                        if (lifespan.isDead()) {
+                            continue;
+                        }
+                    }
+
+                    const source = rl.Rectangle.init(growth.state * sprite.width, 0, sprite.width, sprite.height);
+
+                    if (growth.state == 4 and growth.hasPollen) {
+                        drawSpriteAtGridPosition(
+                            sprite.texture,
+                            gridPos.x,
+                            gridPos.y,
+                            source,
+                            sprite.scale + 0.1,
+                            rl.Color.init(255, 255, 100, 128),
+                            gridOffset,
+                            gridScale,
+                        );
+                    }
+
+                    drawSpriteAtGridPosition(
+                        sprite.texture,
+                        gridPos.x,
+                        gridPos.y,
+                        source,
+                        sprite.scale,
+                        rl.Color.white,
+                        gridOffset,
+                        gridScale,
+                    );
+                }
+            }
+        }
+    }
+
+    var beeIter = try world.queryEntitiesWithBeeAI();
+    while (beeIter.next()) |entity| {
+        if (world.getPosition(entity)) |position| {
+            if (world.getSprite(entity)) |sprite| {
+                if (world.getScaleSync(entity)) |scaleSync| {
+                    if (world.getBeeAI(entity)) |beeAI| {
+                        if (world.getLifespan(entity)) |lifespan| {
+                            if (lifespan.isDead()) {
+                                continue;
+                            }
+                        }
+
+                        const color = if (beeAI.carryingPollen) rl.Color.yellow else rl.Color.white;
+                        rl.drawTextureEx(sprite.texture, position.toVector2(), 0, scaleSync.effectiveScale, color);
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn drawSpriteAtGridPosition(
+    texture: rl.Texture,
+    i: f32,
+    j: f32,
+    sourceRect: rl.Rectangle,
+    scale: f32,
+    color: rl.Color,
+    gridOffset: rl.Vector2,
+    gridScale: f32,
+) void {
+    const tilePosition = utils.isoToXY(i, j, 32, 32, gridOffset.x, gridOffset.y, gridScale);
+    const effectiveScale = scale * (gridScale / 3.0);
+
+    const tileWidth = 32 * gridScale;
+    const tileHeight = 32 * gridScale;
+
+    const centeredX = tilePosition.x + (tileWidth - sourceRect.width * effectiveScale) / 2.0;
+    const centeredY = tilePosition.y + (tileHeight * 0.25) - (sourceRect.height * effectiveScale);
+
+    const destination = rl.Rectangle.init(centeredX, centeredY, sourceRect.width * effectiveScale, sourceRect.height * effectiveScale);
+
+    rl.drawTexturePro(texture, sourceRect, destination, rl.Vector2.init(0, 0), 0, color);
+}
