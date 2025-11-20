@@ -131,11 +131,19 @@ fn getRandomFlowerType() @import("../../textures.zig").Flowers {
 }
 
 fn trySpawnFlowerInEmptyCell(world: *World, gridWidth: usize, gridHeight: usize, textures: anytype) !void {
+    const centerX: usize = (gridWidth - 1) / 2;
+    const centerY: usize = (gridHeight - 1) / 2;
+
     // Try a few random cells to find an empty one
     var attempts: usize = 0;
     while (attempts < 5) : (attempts += 1) {
         const gridI: usize = @intCast(rl.getRandomValue(0, @intCast(gridWidth - 1)));
         const gridJ: usize = @intCast(rl.getRandomValue(0, @intCast(gridHeight - 1)));
+
+        // Skip beehive tile
+        if (gridI == centerX and gridJ == centerY) {
+            continue;
+        }
 
         // Check if this cell already has a flower
         var hasFlower = false;

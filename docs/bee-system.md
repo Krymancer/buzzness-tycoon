@@ -15,7 +15,32 @@ The Bee system (`bee.zig` - REMOVED) implemented autonomous bee agents that coll
 **Current ECS Implementation:**
 - Bees are entities with `BeeAI`, `Position`, `PollenCollector`, `Lifespan`, `Sprite`, and `ScaleSync` components
 - Behavior handled by `bee_ai_system.zig`
-- Key features: scatter behavior, density limiting, pollination, life extension
+- Key features: scatter behavior, density limiting, pollination, life extension, beehive targeting
+
+## Current ECS Bee Behavior
+
+### Pollen Collection and Deposit Flow
+
+1. **Flower Targeting**: Bees seek flowers with pollen (state 4)
+2. **Pollen Collection**: When close to flower, collect pollen and enter scatter mode
+3. **Scatter**: Bees wander for 2-4 seconds after collection to disperse
+4. **Beehive Targeting**: Bees carrying pollen target the central beehive
+5. **Deposit**: When within 30 pixels of beehive, pollen is deposited
+6. **Honey Conversion**: Deposited pollen is converted to honey resource
+
+### Beehive System
+
+**Location:**
+- Beehive is spawned at grid center (8, 8) on 17x17 grid
+- Marked with `Beehive` component for easy identification
+- Has `GridPosition` and `Sprite` components
+
+**Pollen Deposit Mechanics:**
+- Bees with `carryingPollen = true` automatically target beehive
+- Uses `findBeehive()` function to locate beehive entity
+- Movement uses same interpolation as flower targeting
+- Deposit occurs within 30-pixel radius (larger than flower threshold)
+- After deposit, bee resets and can target flowers again
 
 ## Bee Structure (Legacy)
 

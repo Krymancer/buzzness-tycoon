@@ -22,8 +22,8 @@ const flower_spawning_system = @import("ecs/systems/flower_spawning_system.zig")
 const render_system = @import("ecs/systems/render_system.zig");
 
 pub const Game = struct {
-    const GRID_WIDTH = 16;
-    const GRID_HEIGHT = 16;
+    const GRID_WIDTH = 17;
+    const GRID_HEIGHT = 17;
     const FLOWER_SPAWN_CHANCE = 30;
 
     width: f32,
@@ -42,6 +42,8 @@ pub const Game = struct {
     cameraOffset: rl.Vector2,
     isDragging: bool,
     lastMousePos: rl.Vector2,
+
+    beehiveUpgradeCost: f32,
 
     allocator: std.mem.Allocator,
 
@@ -66,8 +68,21 @@ pub const Game = struct {
 
         var world = World.init(allocator);
 
+        const centerX: f32 = @floatFromInt((GRID_WIDTH - 1) / 2);
+        const centerY: f32 = @floatFromInt((GRID_HEIGHT - 1) / 2);
+
+        const beehiveEntity = try world.createEntity();
+        try world.addGridPosition(beehiveEntity, components.GridPosition.init(centerX, centerY));
+        try world.addSprite(beehiveEntity, components.Sprite.init(textures.beehive, 32, 32, 2));
+        try world.addBeehive(beehiveEntity, components.Beehive.init());
+
         for (0..grid.width) |i| {
             for (0..grid.height) |j| {
+                // Skip beehive center tile
+                if (i == (GRID_WIDTH - 1) / 2 and j == (GRID_HEIGHT - 1) / 2) {
+                    continue;
+                }
+
                 const shouldHaveFlower = rl.getRandomValue(1, 100) <= FLOWER_SPAWN_CHANCE;
                 if (shouldHaveFlower) {
                     const x = rl.getRandomValue(1, 3);
@@ -125,6 +140,8 @@ pub const Game = struct {
             .cameraOffset = rl.Vector2.init(0, 0),
             .isDragging = false,
             .lastMousePos = rl.Vector2.init(0, 0),
+
+            .beehiveUpgradeCost = 20.0,
 
             .width = width,
             .height = height,
@@ -196,13 +213,22 @@ pub const Game = struct {
         try flower_spawning_system.update(&self.world, deltaTime, self.grid.offset, self.grid.scale, GRID_WIDTH, GRID_HEIGHT, self.textures);
         try scale_sync_system.update(&self.world, self.grid.scale);
 
+        // Get beehive honey conversion factor
+        var honeyFactor: f32 = 1.0;
+        var beehiveIter = self.world.entityToBeehive.keyIterator();
+        if (beehiveIter.next()) |beehiveEntity| {
+            if (self.world.getBeehive(beehiveEntity.*)) |beehive| {
+                honeyFactor = beehive.honeyConversionFactor;
+            }
+        }
+
         var beeIter = try self.world.queryEntitiesWithBeeAI();
         while (beeIter.next()) |entity| {
             if (self.world.getPollenCollector(entity)) |collector| {
                 if (self.world.getBeeAI(entity)) |beeAI| {
                     // Convert pollen to honey when bee has deposited (not carrying anymore)
                     if (!beeAI.carryingPollen and collector.pollenCollected > 0) {
-                        const newHoney = collector.pollenCollected;
+                        const newHoney = collector.pollenCollected * honeyFactor;
                         self.resources.addHoney(newHoney);
                         collector.pollenCollected = 0;
                     }
@@ -229,7 +255,19 @@ pub const Game = struct {
             beeCount += 1;
         }
 
-        if (self.ui.draw(self.resources.honey, beeCount)) {
+        // Get current beehive factor
+        var honeyFactor: f32 = 1.0;
+        var beehiveIter = self.world.entityToBeehive.keyIterator();
+        if (beehiveIter.next()) |beehiveEntity| {
+            if (self.world.getBeehive(beehiveEntity.*)) |beehive| {
+                honeyFactor = beehive.honeyConversionFactor;
+            }
+        }
+
+        const uiActions = self.ui.draw(self.resources.honey, beeCount, honeyFactor, self.beehiveUpgradeCost);
+
+        // Handle buy bee button
+        if (uiActions.buyBee) {
             if (self.resources.spendHoney(10.0)) {
                 const randomPos = self.grid.getRandomPositionInBounds();
 
@@ -243,6 +281,19 @@ pub const Game = struct {
 
                 if (self.world.getScaleSync(beeEntity)) |scaleSync| {
                     scaleSync.updateFromGrid(1, self.grid.scale);
+                }
+            }
+        }
+
+        // Handle upgrade beehive button
+        if (uiActions.upgradeBeehive) {
+            if (self.resources.spendHoney(self.beehiveUpgradeCost)) {
+                var beehiveIter2 = self.world.entityToBeehive.keyIterator();
+                if (beehiveIter2.next()) |beehiveEntity| {
+                    if (self.world.getBeehive(beehiveEntity.*)) |beehive| {
+                        beehive.honeyConversionFactor *= 2.0;
+                        self.beehiveUpgradeCost *= 2.0;
+                    }
                 }
             }
         }
