@@ -44,6 +44,7 @@ pub const Game = struct {
     lastMousePos: rl.Vector2,
 
     beehiveUpgradeCost: f32,
+    cachedBeeCount: usize,
 
     allocator: std.mem.Allocator,
 
@@ -142,6 +143,7 @@ pub const Game = struct {
             .lastMousePos = rl.Vector2.init(0, 0),
 
             .beehiveUpgradeCost = 20.0,
+            .cachedBeeCount = 10,
 
             .width = width,
             .height = height,
@@ -222,8 +224,12 @@ pub const Game = struct {
             }
         }
 
-        var beeIter = try self.world.queryEntitiesWithBeeAI();
+        // Count bees and convert honey in single pass
+        self.cachedBeeCount = 0;
+        var beeIter = self.world.iterateBees();
         while (beeIter.next()) |entity| {
+            self.cachedBeeCount += 1;
+
             if (self.world.getPollenCollector(entity)) |collector| {
                 if (self.world.getBeeAI(entity)) |beeAI| {
                     // Convert pollen to honey when bee has deposited (not carrying anymore)
@@ -249,22 +255,16 @@ pub const Game = struct {
 
         try render_system.draw(&self.world, self.grid.offset, self.grid.scale);
 
-        var beeCount: usize = 0;
-        var beeIter = try self.world.queryEntitiesWithBeeAI();
-        while (beeIter.next()) |_| {
-            beeCount += 1;
-        }
-
-        // Get current beehive factor
+        // Get beehive honey conversion factor for UI
         var honeyFactor: f32 = 1.0;
-        var beehiveIter = self.world.entityToBeehive.keyIterator();
-        if (beehiveIter.next()) |beehiveEntity| {
+        var beehiveIterForUI = self.world.entityToBeehive.keyIterator();
+        if (beehiveIterForUI.next()) |beehiveEntity| {
             if (self.world.getBeehive(beehiveEntity.*)) |beehive| {
                 honeyFactor = beehive.honeyConversionFactor;
             }
         }
 
-        const uiActions = self.ui.draw(self.resources.honey, beeCount, honeyFactor, self.beehiveUpgradeCost);
+        const uiActions = self.ui.draw(self.resources.honey, self.cachedBeeCount, honeyFactor, self.beehiveUpgradeCost);
 
         // Handle buy bee button
         if (uiActions.buyBee) {
@@ -282,6 +282,8 @@ pub const Game = struct {
                 if (self.world.getScaleSync(beeEntity)) |scaleSync| {
                     scaleSync.updateFromGrid(1, self.grid.scale);
                 }
+
+                self.cachedBeeCount += 1; // Update cache
             }
         }
 

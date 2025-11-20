@@ -276,6 +276,7 @@ pub const World = struct {
     pub const QueryIterator = struct {
         entities: []const Entity,
         index: usize,
+        allocator: std.mem.Allocator,
 
         pub fn next(self: *@This()) ?Entity {
             if (self.index >= self.entities.len) {
@@ -285,7 +286,55 @@ pub const World = struct {
             self.index += 1;
             return entity;
         }
+
+        pub fn deinit(self: *@This()) void {
+            self.allocator.free(self.entities);
+        }
     };
+
+    // Direct iterator for bees - no allocation
+    pub const DirectBeeIterator = struct {
+        iter: std.AutoHashMap(Entity, ComponentIndex).KeyIterator,
+        world: *World,
+
+        pub fn next(self: *@This()) ?Entity {
+            while (self.iter.next()) |entity| {
+                if (self.world.entityToPosition.contains(entity.*)) {
+                    return entity.*;
+                }
+            }
+            return null;
+        }
+    };
+
+    pub fn iterateBees(self: *@This()) DirectBeeIterator {
+        return .{
+            .iter = self.entityToBeeAI.keyIterator(),
+            .world = self,
+        };
+    }
+
+    // Direct iterator for flowers - no allocation
+    pub const DirectFlowerIterator = struct {
+        iter: std.AutoHashMap(Entity, ComponentIndex).KeyIterator,
+        world: *World,
+
+        pub fn next(self: *@This()) ?Entity {
+            while (self.iter.next()) |entity| {
+                if (self.world.entityToGridPosition.contains(entity.*)) {
+                    return entity.*;
+                }
+            }
+            return null;
+        }
+    };
+
+    pub fn iterateFlowers(self: *@This()) DirectFlowerIterator {
+        return .{
+            .iter = self.entityToFlowerGrowth.keyIterator(),
+            .world = self,
+        };
+    }
 
     pub fn queryEntitiesWithPosition(self: *@This()) !QueryIterator {
         var entities: std.ArrayList(Entity) = .empty;
@@ -296,6 +345,7 @@ pub const World = struct {
         return QueryIterator{
             .entities = try entities.toOwnedSlice(self.allocator),
             .index = 0,
+            .allocator = self.allocator,
         };
     }
 
@@ -310,6 +360,7 @@ pub const World = struct {
         return QueryIterator{
             .entities = try entities.toOwnedSlice(self.allocator),
             .index = 0,
+            .allocator = self.allocator,
         };
     }
 
@@ -324,6 +375,7 @@ pub const World = struct {
         return QueryIterator{
             .entities = try entities.toOwnedSlice(self.allocator),
             .index = 0,
+            .allocator = self.allocator,
         };
     }
 
@@ -336,6 +388,7 @@ pub const World = struct {
         return QueryIterator{
             .entities = try entities.toOwnedSlice(self.allocator),
             .index = 0,
+            .allocator = self.allocator,
         };
     }
 
@@ -348,6 +401,7 @@ pub const World = struct {
         return QueryIterator{
             .entities = try entities.toOwnedSlice(self.allocator),
             .index = 0,
+            .allocator = self.allocator,
         };
     }
 
@@ -362,6 +416,7 @@ pub const World = struct {
         return QueryIterator{
             .entities = try entities.toOwnedSlice(self.allocator),
             .index = 0,
+            .allocator = self.allocator,
         };
     }
 };

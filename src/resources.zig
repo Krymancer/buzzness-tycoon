@@ -12,7 +12,7 @@ pub const Resources = struct {
 
     pub fn init() @This() {
         return .{
-            .honey = 25.0,
+            .honey = 69420.0,
         };
     }
 

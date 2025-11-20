@@ -2,6 +2,8 @@ const World = @import("../world.zig").World;
 
 pub fn update(world: *World, deltaTime: f32) !void {
     var iter = try world.queryEntitiesWithFlowerGrowth();
+    defer iter.deinit();
+
     while (iter.next()) |entity| {
         if (world.getFlowerGrowth(entity)) |growth| {
             if (world.getLifespan(entity)) |lifespan| {

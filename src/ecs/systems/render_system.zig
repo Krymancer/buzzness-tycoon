@@ -22,7 +22,7 @@ pub fn draw(world: *World, gridOffset: rl.Vector2, gridScale: f32) !void {
         }
     }
 
-    var flowerIter = try world.queryEntitiesWithFlowerGrowth();
+    var flowerIter = world.iterateFlowers();
     while (flowerIter.next()) |entity| {
         if (world.getFlowerGrowth(entity)) |growth| {
             if (world.getGridPosition(entity)) |gridPos| {
@@ -63,7 +63,7 @@ pub fn draw(world: *World, gridOffset: rl.Vector2, gridScale: f32) !void {
         }
     }
 
-    var beeIter = try world.queryEntitiesWithBeeAI();
+    var beeIter = world.iterateBees();
     while (beeIter.next()) |entity| {
         if (world.getPosition(entity)) |position| {
             if (world.getSprite(entity)) |sprite| {
