@@ -16,39 +16,14 @@ pub fn update(
     gridHeight: usize,
     textures: anytype,
 ) !void {
+    _ = gridOffset;
+    _ = gridScale;
+
     // Periodically spawn flowers in empty cells
     emptyCellTimer += deltaTime;
     if (emptyCellTimer >= EMPTY_CELL_CHECK_INTERVAL) {
         emptyCellTimer = 0;
         try trySpawnFlowerInEmptyCell(world, gridWidth, gridHeight, textures);
-    }
-
-    var iter = try world.queryEntitiesWithBeeAI();
-    while (iter.next()) |entity| {
-        if (world.getBeeAI(entity)) |beeAI| {
-            if (world.getPosition(entity)) |position| {
-                if (beeAI.carryingPollen) {
-                    const spawnChancePerSecond = 0.1;
-                    const spawnChanceThisFrame = spawnChancePerSecond * deltaTime;
-                    const randomValue = @as(f32, @floatFromInt(rl.getRandomValue(0, 1000))) / 1000.0;
-
-                    if (randomValue < spawnChanceThisFrame) {
-                        const spawned = try trySpawnFlower(
-                            world,
-                            position.toVector2(),
-                            gridOffset,
-                            gridScale,
-                            gridWidth,
-                            gridHeight,
-                            textures,
-                        );
-                        if (spawned) {
-                            beeAI.carryingPollen = false;
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -66,6 +41,8 @@ fn trySpawnFlower(
     const gridJ = @as(usize, @intFromFloat(@max(0, @min(@as(f32, @floatFromInt(gridHeight - 1)), gridPos.y))));
 
     var iter = try world.queryEntitiesWithFlowerGrowth();
+    defer iter.deinit();
+
     while (iter.next()) |entity| {
         if (world.getGridPosition(entity)) |existingGridPos| {
             if (world.getLifespan(entity)) |lifespan| {
@@ -80,6 +57,8 @@ fn trySpawnFlower(
     }
 
     var iter2 = try world.queryEntitiesWithFlowerGrowth();
+    defer iter2.deinit();
+
     while (iter2.next()) |entity| {
         if (world.getGridPosition(entity)) |existingGridPos| {
             if (world.getFlowerGrowth(entity)) |growth| {
@@ -148,6 +127,8 @@ fn trySpawnFlowerInEmptyCell(world: *World, gridWidth: usize, gridHeight: usize,
         // Check if this cell already has a flower
         var hasFlower = false;
         var iter = try world.queryEntitiesWithFlowerGrowth();
+        defer iter.deinit();
+
         while (iter.next()) |entity| {
             if (world.getGridPosition(entity)) |gridPos| {
                 if (world.getLifespan(entity)) |lifespan| {
