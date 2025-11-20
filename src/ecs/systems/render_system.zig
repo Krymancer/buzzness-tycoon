@@ -3,6 +3,25 @@ const World = @import("../world.zig").World;
 const utils = @import("../../utils.zig");
 
 pub fn draw(world: *World, gridOffset: rl.Vector2, gridScale: f32) !void {
+    // Draw beehive first (so it's behind other entities)
+    var beehiveIter = world.entityToBeehive.keyIterator();
+    while (beehiveIter.next()) |entity| {
+        if (world.getGridPosition(entity.*)) |gridPos| {
+            if (world.getSprite(entity.*)) |sprite| {
+                drawBeehiveAtGridPosition(
+                    sprite.texture,
+                    gridPos.x,
+                    gridPos.y,
+                    sprite.width,
+                    sprite.height,
+                    sprite.scale,
+                    gridOffset,
+                    gridScale,
+                );
+            }
+        }
+    }
+
     var flowerIter = try world.queryEntitiesWithFlowerGrowth();
     while (flowerIter.next()) |entity| {
         if (world.getFlowerGrowth(entity)) |growth| {
@@ -87,4 +106,29 @@ fn drawSpriteAtGridPosition(
     const destination = rl.Rectangle.init(centeredX, centeredY, sourceRect.width * effectiveScale, sourceRect.height * effectiveScale);
 
     rl.drawTexturePro(texture, sourceRect, destination, rl.Vector2.init(0, 0), 0, color);
+}
+
+fn drawBeehiveAtGridPosition(
+    texture: rl.Texture,
+    i: f32,
+    j: f32,
+    width: f32,
+    height: f32,
+    scale: f32,
+    gridOffset: rl.Vector2,
+    gridScale: f32,
+) void {
+    const tilePosition = utils.isoToXY(i, j, 32, 32, gridOffset.x, gridOffset.y, gridScale);
+    const effectiveScale = scale * (gridScale / 3.0);
+
+    const tileWidth = 32 * gridScale;
+    const tileHeight = 32 * gridScale;
+
+    const centeredX = tilePosition.x + (tileWidth - width * effectiveScale) / 2.0;
+    const centeredY = tilePosition.y + (tileHeight * 0.5) - (height * effectiveScale);
+
+    const source = rl.Rectangle.init(0, 0, width, height);
+    const destination = rl.Rectangle.init(centeredX, centeredY, width * effectiveScale, height * effectiveScale);
+
+    rl.drawTexturePro(texture, source, destination, rl.Vector2.init(0, 0), 0, rl.Color.white);
 }

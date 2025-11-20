@@ -20,6 +20,7 @@ pub const World = struct {
     lifespans: std.ArrayList(components.Lifespan),
     pollenCollectors: std.ArrayList(components.PollenCollector),
     scaleSync: std.ArrayList(components.ScaleSync),
+    beehives: std.ArrayList(components.Beehive),
 
     entityToPosition: std.AutoHashMap(Entity, ComponentIndex),
     entityToGridPosition: std.AutoHashMap(Entity, ComponentIndex),
@@ -30,6 +31,7 @@ pub const World = struct {
     entityToLifespan: std.AutoHashMap(Entity, ComponentIndex),
     entityToPollenCollector: std.AutoHashMap(Entity, ComponentIndex),
     entityToScaleSync: std.AutoHashMap(Entity, ComponentIndex),
+    entityToBeehive: std.AutoHashMap(Entity, ComponentIndex),
 
     entitiesToDestroy: std.ArrayList(Entity),
 
@@ -47,6 +49,7 @@ pub const World = struct {
             .lifespans = .empty,
             .pollenCollectors = .empty,
             .scaleSync = .empty,
+            .beehives = .empty,
 
             .entityToPosition = std.AutoHashMap(Entity, ComponentIndex).init(allocator),
             .entityToGridPosition = std.AutoHashMap(Entity, ComponentIndex).init(allocator),
@@ -57,6 +60,7 @@ pub const World = struct {
             .entityToLifespan = std.AutoHashMap(Entity, ComponentIndex).init(allocator),
             .entityToPollenCollector = std.AutoHashMap(Entity, ComponentIndex).init(allocator),
             .entityToScaleSync = std.AutoHashMap(Entity, ComponentIndex).init(allocator),
+            .entityToBeehive = std.AutoHashMap(Entity, ComponentIndex).init(allocator),
 
             .entitiesToDestroy = .empty,
         };
@@ -74,6 +78,7 @@ pub const World = struct {
         self.lifespans.deinit(self.allocator);
         self.pollenCollectors.deinit(self.allocator);
         self.scaleSync.deinit(self.allocator);
+        self.beehives.deinit(self.allocator);
 
         self.entityToPosition.deinit();
         self.entityToGridPosition.deinit();
@@ -84,6 +89,7 @@ pub const World = struct {
         self.entityToLifespan.deinit();
         self.entityToPollenCollector.deinit();
         self.entityToScaleSync.deinit();
+        self.entityToBeehive.deinit();
 
         self.entitiesToDestroy.deinit(self.allocator);
     }
@@ -114,6 +120,7 @@ pub const World = struct {
         self.removeLifespan(entity);
         self.removePollenCollector(entity);
         self.removeScaleSync(entity);
+        self.removeBeehive(entity);
     }
 
     pub fn addPosition(self: *@This(), entity: Entity, position: components.Position) !void {
@@ -249,6 +256,21 @@ pub const World = struct {
 
     pub fn removeScaleSync(self: *@This(), entity: Entity) void {
         _ = self.entityToScaleSync.remove(entity);
+    }
+
+    pub fn addBeehive(self: *@This(), entity: Entity, beehive: components.Beehive) !void {
+        const index = self.beehives.items.len;
+        try self.beehives.append(self.allocator, beehive);
+        try self.entityToBeehive.put(entity, index);
+    }
+
+    pub fn getBeehive(self: *@This(), entity: Entity) ?*components.Beehive {
+        const index = self.entityToBeehive.get(entity) orelse return null;
+        return &self.beehives.items[index];
+    }
+
+    pub fn removeBeehive(self: *@This(), entity: Entity) void {
+        _ = self.entityToBeehive.remove(entity);
     }
 
     pub const QueryIterator = struct {

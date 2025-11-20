@@ -10,12 +10,14 @@ pub const Textures = struct {
     rose: rl.Texture,
     dandelion: rl.Texture,
     tulip: rl.Texture,
+    beehive: rl.Texture,
     pub fn init() !@This() {
         return .{
             .rose = try assets.loadTextureFromMemory(assets.rose_png),
             .tulip = try assets.loadTextureFromMemory(assets.tulip_png),
             .dandelion = try assets.loadTextureFromMemory(assets.dandelion_png),
             .bee = try assets.loadTextureFromMemory(assets.bee_png),
+            .beehive = try assets.loadTextureFromMemory(assets.beehive_png),
         };
     }
 
@@ -24,6 +26,7 @@ pub const Textures = struct {
         rl.unloadTexture(self.dandelion);
         rl.unloadTexture(self.tulip);
         rl.unloadTexture(self.bee);
+        rl.unloadTexture(self.beehive);
     }
 
     pub fn getFlowerTexture(self: @This(), flower: Flowers) rl.Texture {

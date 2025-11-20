@@ -22,8 +22,8 @@ See [ECS Refactor Plan](./ecs-refactor-plan.md) for complete architecture detail
 ```zig
 pub const Game = struct {
     // Grid configuration
-    const GRID_WIDTH = 16;
-    const GRID_HEIGHT = 16;
+    const GRID_WIDTH = 17;
+    const GRID_HEIGHT = 17;
     const FLOWER_SPAWN_CHANCE = 30;
     
     // Core systems
@@ -62,11 +62,17 @@ The initialization phase sets up:
 5. **Entity Spawning** - Creates initial flowers (30% per cell) and bees (10 initial bees)
 
 **Initial Flower Spawning:**
-- Iterates through all 16x16 grid positions
+- Iterates through all 17x17 grid positions
 - 30% chance per tile to spawn a flower
 - Randomly selects flower type (rose, dandelion, tulip)
 - Creates entity with: GridPosition, Sprite, FlowerGrowth, Lifespan components
 - Flowers start at growth state 0, mature to state 4
+- Center position (8, 8) reserved for beehive
+
+**Beehive Spawning:**
+- Single beehive entity spawned at grid center (8, 8)
+- Creates entity with: GridPosition, Sprite, Beehive components
+- Serves as the pollen deposit point for honey conversion
 
 **Initial Bee Spawning:**
 - Spawns 10 bees at random positions within grid bounds
@@ -92,7 +98,8 @@ The update phase runs ECS systems in this order:
 3. **Bee AI System**
    - Handles pollination (10% chance to spawn flower when flying over empty cells)
    - Manages scatter behavior (2-4 seconds after collecting pollen)
-   - Processes pollen deposit timer (3 seconds to convert to honey)
+   - When carrying pollen, targets beehive for deposit
+   - Deposits pollen at beehive when within 30 pixels
    - Finds nearest flower with density limiting (max 2 bees per flower)
    - Random walk when no targets available
    - Bee movement toward targets
@@ -229,8 +236,8 @@ The game uses careful memory management:
 ## Configuration Constants
 
 ```zig
-const GRID_WIDTH = 16;           // Grid width in tiles
-const GRID_HEIGHT = 16;          // Grid height in tiles
+const GRID_WIDTH = 17;           // Grid width in tiles (odd for center)
+const GRID_HEIGHT = 17;          // Grid height in tiles (odd for center)
 const FLOWER_SPAWN_CHANCE = 30;  // Percentage chance for initial flower spawn
 ```
 

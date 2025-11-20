@@ -192,8 +192,8 @@ pub fn getRandomPositionInBounds(self: Grid) rl.Vector2
 ## Configuration Values
 
 ```zig
-const GRID_WIDTH = 16;          // Default grid width
-const GRID_HEIGHT = 16;         // Default grid height
+const GRID_WIDTH = 17;          // Default grid width (odd for center)
+const GRID_HEIGHT = 17;         // Default grid height (odd for center)
 const TILE_WIDTH = 32.0;        // Tile width in pixels
 const TILE_HEIGHT = 32.0;       // Tile height in pixels
 const BASE_SCALE = 3.0;         // Default zoom level

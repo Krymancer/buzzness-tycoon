@@ -24,31 +24,47 @@ pub const UI = struct {
         _ = self;
     }
 
-    pub fn draw(self: @This(), honey: f32, bees: usize) bool {
+    pub fn draw(self: @This(), honey: f32, bees: usize, beehiveFactor: f32, upgradeCost: f32) struct { buyBee: bool, upgradeBeehive: bool } {
         _ = self;
         rl.drawText(rl.textFormat("Honey: %.0f", .{honey}), 10, 10, 30, rl.Color.white);
         rl.drawText(rl.textFormat("Bees: %d", .{bees}), 10, 40, 30, rl.Color.white);
+        rl.drawText(rl.textFormat("Beehive Factor: %.1fx", .{beehiveFactor}), 10, 70, 20, rl.Color.yellow);
 
-        const buttonText = "Buy Bee (10 Honey)";
         const buttonWidth: f32 = 220;
         const buttonHeight: f32 = 40;
-        const buttonRect = rl.Rectangle.init(10, 80, buttonWidth, buttonHeight);
 
-        const canAfford = honey >= 10.0;
+        // Buy Bee button
+        const buyBeeRect = rl.Rectangle.init(10, 100, buttonWidth, buttonHeight);
+        const canAffordBee = honey >= 10.0;
 
-        // Disable the button if player can't afford it
-        if (!canAfford) {
+        if (!canAffordBee) {
             rg.setState(@intFromEnum(rg.State.disabled));
         }
 
-        // Use raygui button instead of manual rectangle drawing
-        const buttonPressed = rg.button(buttonRect, buttonText);
+        const buyBeePressed = rg.button(buyBeeRect, "Buy Bee (10 Honey)");
 
-        // Re-enable GUI if it was disabled
-        if (!canAfford) {
+        if (!canAffordBee) {
             rg.setState(@intFromEnum(rg.State.normal));
         }
 
-        return buttonPressed and canAfford;
+        // Upgrade Beehive button
+        const upgradeRect = rl.Rectangle.init(10, 150, buttonWidth, buttonHeight);
+        const canAffordUpgrade = honey >= upgradeCost;
+
+        if (!canAffordUpgrade) {
+            rg.setState(@intFromEnum(rg.State.disabled));
+        }
+
+        const upgradeText = rl.textFormat("Upgrade Beehive (%.0f)", .{upgradeCost});
+        const upgradePressed = rg.button(upgradeRect, upgradeText);
+
+        if (!canAffordUpgrade) {
+            rg.setState(@intFromEnum(rg.State.normal));
+        }
+
+        return .{
+            .buyBee = buyBeePressed and canAffordBee,
+            .upgradeBeehive = upgradePressed and canAffordUpgrade,
+        };
     }
 };

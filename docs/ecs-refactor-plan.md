@@ -67,12 +67,9 @@ BeeAI {
     carryingPollen: bool,
     wanderAngle: f32,
     wanderChangeTimer: f32,
-    depositTimer: f32,
     lastGridX: i32,
     lastGridY: i32,
     scatterTimer: f32,
-}
-    carryingPollen: bool,
 }
 
 FlowerGrowth {
@@ -96,6 +93,10 @@ PollenCollector {
 
 ScaleSync { 
     effectiveScale: f32 
+}
+
+Beehive { 
+    // Marker component for the central beehive entity
 }
 ```
 
@@ -127,6 +128,7 @@ World {
     lifespans: ArrayList(Lifespan),
     pollenCollectors: ArrayList(PollenCollector),
     scaleSync: ArrayList(ScaleSync),
+    beehives: ArrayList(Beehive),
     
     // Sparse mapping: entityId -> component array index
     entityToPosition: AutoHashMap(Entity, usize),
@@ -138,6 +140,7 @@ World {
     entityToLifespan: AutoHashMap(Entity, usize),
     entityToPollenCollector: AutoHashMap(Entity, usize),
     entityToScaleSync: AutoHashMap(Entity, usize),
+    entityToBeehive: AutoHashMap(Entity, usize),
     
     // Destroy queue for deferred entity removal
     entitiesToDestroy: ArrayList(Entity),

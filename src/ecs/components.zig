@@ -66,7 +66,6 @@ pub const BeeAI = struct {
     carryingPollen: bool,
     wanderAngle: f32,
     wanderChangeTimer: f32,
-    depositTimer: f32,
     lastGridX: i32,
     lastGridY: i32,
     scatterTimer: f32,
@@ -79,7 +78,6 @@ pub const BeeAI = struct {
             .carryingPollen = false,
             .wanderAngle = @as(f32, @floatFromInt(rl_module.getRandomValue(0, 360))) * std.math.pi / 180.0,
             .wanderChangeTimer = 0,
-            .depositTimer = 0,
             .lastGridX = -1,
             .lastGridY = -1,
             .scatterTimer = 0,
@@ -147,5 +145,15 @@ pub const ScaleSync = struct {
 
     pub fn updateFromGrid(self: *@This(), baseScale: f32, gridScale: f32) void {
         self.effectiveScale = baseScale * (gridScale / 3.0);
+    }
+};
+
+pub const Beehive = struct {
+    honeyConversionFactor: f32,
+
+    pub fn init() @This() {
+        return .{
+            .honeyConversionFactor = 1.0,
+        };
     }
 };

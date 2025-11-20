@@ -29,20 +29,39 @@ pub fn update(world: *World, deltaTime: f32, gridOffset: rl.Vector2, gridScale: 
                     continue; // Skip targeting while scattering
                 }
 
-                // Handle pollen deposit timer
+                // If carrying pollen, find and go to beehive
                 if (beeAI.carryingPollen) {
-                    beeAI.depositTimer += deltaTime;
+                    if (!beeAI.targetLocked) {
+                        beeAI.targetEntity = try findBeehive(world);
+                        if (beeAI.targetEntity != null) {
+                            beeAI.targetLocked = true;
+                        }
+                    }
 
-                    // After 3 seconds, deposit the pollen as honey
-                    if (beeAI.depositTimer >= 3.0) {
-                        if (world.getPollenCollector(entity)) |collector| {
-                            if (collector.pollenCollected > 0) {
-                                // This will be picked up by the honey conversion in game.zig
-                                beeAI.carryingPollen = false;
-                                beeAI.depositTimer = 0;
+                    if (beeAI.targetEntity) |targetEntity| {
+                        if (world.getGridPosition(targetEntity)) |targetGridPos| {
+                            const targetPos = getFlowerWorldPosition(targetGridPos.toVector2(), gridOffset, gridScale);
+                            const distance = rl.math.vector2Distance(position.toVector2(), targetPos);
+                            const arrivalThreshold: f32 = 30.0;
+
+                            if (distance < arrivalThreshold) {
+                                // Deposit pollen at beehive
+                                if (world.getPollenCollector(entity)) |collector| {
+                                    if (collector.pollenCollected > 0) {
+                                        beeAI.carryingPollen = false;
+                                        beeAI.targetLocked = false;
+                                        beeAI.targetEntity = null;
+                                    }
+                                }
+                            } else {
+                                // Move towards beehive
+                                const leapFactor: f32 = 0.9;
+                                position.x += (targetPos.x - position.x) * leapFactor * deltaTime;
+                                position.y += (targetPos.y - position.y) * leapFactor * deltaTime;
                             }
                         }
                     }
+                    continue;
                 }
 
                 if (!beeAI.targetLocked) {
@@ -196,6 +215,14 @@ fn findNearestFlower(world: *World, currentBee: Entity, beePosition: rl.Vector2,
     return nearestFlowerEntity;
 }
 
+fn findBeehive(world: *World) !?Entity {
+    var iter = world.entityToBeehive.keyIterator();
+    while (iter.next()) |entity| {
+        return entity.*;
+    }
+    return null;
+}
+
 fn getFlowerWorldPosition(gridPos: rl.Vector2, offset: rl.Vector2, gridScale: f32) rl.Vector2 {
     const utils = @import("../../utils.zig");
     const tileWidth: f32 = 32;
@@ -254,6 +281,13 @@ fn handlePollination(world: *World, _: Entity, beeAI: anytype, position: anytype
 
     // Check if position is within grid bounds
     if (gridX < 0 or gridY < 0 or gridX >= @as(i32, @intCast(gridWidth)) or gridY >= @as(i32, @intCast(gridHeight))) {
+        return;
+    }
+
+    // Skip beehive tile
+    const centerX: i32 = @intCast((gridWidth - 1) / 2);
+    const centerY: i32 = @intCast((gridHeight - 1) / 2);
+    if (gridX == centerX and gridY == centerY) {
         return;
     }
 
