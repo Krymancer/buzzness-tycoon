@@ -1,0 +1,84 @@
+name: Build Binaries
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ created ]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.15.2
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev xorg-dev
+
+      - name: Build
+        run: zig build
+
+      - name: Upload Linux binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: buzzness-tycoon-linux
+          path: zig-out/bin/buzzness-tycoon
+
+  build-windows:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.15.2
+
+      - name: Build for Windows
+        run: zig build -Dtarget=x86_64-windows
+
+      - name: Upload Windows binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: buzzness-tycoon-windows
+          path: zig-out/bin/buzzness-tycoon.exe
+
+  release:
+    if: github.event_name == 'release'
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Linux binary
+        uses: actions/download-artifact@v4
+        with:
+          name: buzzness-tycoon-linux
+          path: ./linux
+
+      - name: Download Windows binary
+        uses: actions/download-artifact@v4
+        with:
+          name: buzzness-tycoon-windows
+          path: ./windows
+
+      - name: Create archives
+        run: |
+          cd linux && tar -czf ../buzzness-tycoon-linux-x86_64.tar.gz buzzness-tycoon && cd ..
+          cd windows && zip ../buzzness-tycoon-windows-x86_64.zip buzzness-tycoon.exe && cd ..
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            buzzness-tycoon-linux-x86_64.tar.gz
+            buzzness-tycoon-windows-x86_64.zip
